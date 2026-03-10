@@ -10,6 +10,7 @@ from slowapi.errors import RateLimitExceeded
 from app.config import settings
 from app.limiter import limiter
 from app.routers import auth, drills, sessions, users
+from app.routers import comments, feed
 
 app = FastAPI(
     title="Volley Coach Planner API",
@@ -53,6 +54,8 @@ app.include_router(auth.router)
 app.include_router(drills.router)
 app.include_router(sessions.router)
 app.include_router(users.router)
+app.include_router(comments.router)
+app.include_router(feed.router)
 
 
 @app.on_event("startup")

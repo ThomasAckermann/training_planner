@@ -12,6 +12,7 @@ import Register from "./pages/Register.jsx";
 import SessionNew from "./pages/SessionNew.jsx";
 import SessionDetail from "./pages/SessionDetail.jsx";
 import SessionEdit from "./pages/SessionEdit.jsx";
+import SessionCoach from "./pages/SessionCoach.jsx";
 import Profile from "./pages/Profile.jsx";
 
 function ProtectedRoute({ children }) {
@@ -90,6 +91,7 @@ export default function App() {
             }
           />
           <Route path="/sessions/:id" element={<SessionDetail />} />
+          <Route path="/sessions/:id/coach" element={<SessionCoach />} />
           <Route
             path="/sessions/:id/edit"
             element={

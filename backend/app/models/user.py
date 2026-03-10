@@ -6,7 +6,7 @@ from sqlalchemy import DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
-from app.models.drill import Drill
+from app.models.drill import Drill, Favourite
 from app.models.session import Session
 
 
@@ -29,6 +29,25 @@ class User(Base):
         "Drill", back_populates="created_by", lazy="select"
     )  # noqa: F821
     likes: Mapped[list["Like"]] = relationship(back_populates="user", lazy="select")
+    favourites: Mapped[list["Favourite"]] = relationship(
+        back_populates="user", lazy="select"
+    )
+    comments: Mapped[list["Comment"]] = relationship(
+        back_populates="user", lazy="select"
+    )
     sessions: Mapped[list["Session"]] = relationship(
         "Session", back_populates="created_by", lazy="select"
     )  # noqa: F821
+    ratings: Mapped[list["Rating"]] = relationship(back_populates="user", lazy="select")
+    followers: Mapped[list["Follow"]] = relationship(  # noqa: F821
+        "Follow",
+        foreign_keys="Follow.following_id",
+        back_populates="following_user",
+        lazy="select",
+    )
+    following: Mapped[list["Follow"]] = relationship(  # noqa: F821
+        "Follow",
+        foreign_keys="Follow.follower_id",
+        back_populates="follower",
+        lazy="select",
+    )

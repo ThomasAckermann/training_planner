@@ -1,6 +1,7 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   ArrowLeft,
+  Bookmark,
   Pencil,
   Trash2,
   Clock,
@@ -9,6 +10,7 @@ import {
   Heart,
   Copy,
   FileDown,
+  PlayCircle,
 } from "lucide-react";
 import {
   useSession,
@@ -16,8 +18,18 @@ import {
   useLikeSession,
   useDuplicateSession,
 } from "../hooks/useSessions.js";
+import { useFavouriteSession } from "../hooks/useFavourites.js";
+import {
+  useSessionComments,
+  useCreateSessionComment,
+  useDeleteComment,
+} from "../hooks/useComments.js";
 import useAuthStore from "../store/authStore.js";
+import { useUserProfile } from "../hooks/useUsers.js";
 import SessionDrillList from "../components/session/SessionDrillList.jsx";
+import SessionTimeline from "../components/session/SessionTimeline.jsx";
+import SkillCoverageChart from "../components/session/SkillCoverageChart.jsx";
+import CommentThread from "../components/common/CommentThread.jsx";
 import Badge from "../components/ui/Badge.jsx";
 import Button from "../components/ui/Button.jsx";
 import { FOCUS_AREAS } from "../lib/constants.js";
@@ -32,6 +44,11 @@ export default function SessionDetail() {
   const duplicateSession = useDuplicateSession();
 
   const isOwner = currentUser?.id === session?.user_id;
+  const { data: author } = useUserProfile(session?.user_id);
+  const favouriteSession = useFavouriteSession();
+  const { data: comments } = useSessionComments(id);
+  const createComment = useCreateSessionComment(id);
+  const deleteComment = useDeleteComment(["comments", "session", id]);
 
   async function handleDelete() {
     if (!confirm("Delete this session? This action cannot be undone.")) return;
@@ -123,6 +140,23 @@ export default function SessionDetail() {
           {session.title}
         </h1>
 
+        {/* Author */}
+        {author && (
+          <p
+            className="text-sm mb-2"
+            style={{ color: "var(--color-text-muted)" }}
+          >
+            By{" "}
+            <Link
+              to={`/profile/${session.user_id}`}
+              className="hover:underline"
+              style={{ color: "var(--color-accent)" }}
+            >
+              {author.name}
+            </Link>
+          </p>
+        )}
+
         {/* Badges */}
         <div className="flex flex-wrap gap-2 mb-4">
           {session.skill_level && (
@@ -211,6 +245,14 @@ export default function SessionDetail() {
         )}
       </div>
 
+      {/* Timeline + Coverage */}
+      {(session.drills?.length ?? 0) > 0 && (
+        <>
+          <SessionTimeline drills={session.drills} />
+          <SkillCoverageChart drills={session.drills} />
+        </>
+      )}
+
       {/* Drill list */}
       <div className="mb-8">
         <h2
@@ -245,6 +287,16 @@ export default function SessionDetail() {
             ? `${session.likes_count} Likes`
             : "Like this session"}
         </Button>
+        {(session.drills?.length ?? 0) > 0 && (
+          <Button
+            variant="primary"
+            onClick={() => navigate(`/sessions/${id}/coach`)}
+            className="flex items-center gap-2"
+          >
+            <PlayCircle className="w-4 h-4" />
+            Start Coaching
+          </Button>
+        )}
         {currentUser && !isOwner && (
           <Button
             variant="secondary"
@@ -259,12 +311,43 @@ export default function SessionDetail() {
             Duplicate Session
           </Button>
         )}
+        {currentUser && (
+          <Button
+            variant="secondary"
+            onClick={() => favouriteSession.mutate(id)}
+            loading={favouriteSession.isPending}
+            className="flex items-center gap-2"
+          >
+            <Bookmark
+              className="w-4 h-4"
+              style={{ color: "var(--color-accent)" }}
+            />
+            Bookmark
+          </Button>
+        )}
         <a href={`/api/sessions/${id}/export/pdf`} download>
           <Button variant="secondary" className="flex items-center gap-2">
             <FileDown className="w-4 h-4" />
             Export PDF
           </Button>
         </a>
+      </div>
+
+      {/* Comments */}
+      <div
+        className="mt-10 pt-8 border-t"
+        style={{ borderColor: "var(--color-border)" }}
+      >
+        <CommentThread
+          comments={comments ?? []}
+          onPost={(body) => createComment.mutate({ body })}
+          onDelete={(commentId) => deleteComment.mutate(commentId)}
+          onReply={(parentId, body) =>
+            createComment.mutate({ body, parent_id: parentId })
+          }
+          isPosting={createComment.isPending}
+          contentOwnerId={session.user_id}
+        />
       </div>
     </div>
   );

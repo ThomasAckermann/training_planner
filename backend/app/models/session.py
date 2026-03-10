@@ -41,6 +41,9 @@ class Session(Base):
         cascade="all, delete-orphan",
     )
     likes: Mapped[list["Like"]] = relationship("Like", back_populates="session")  # noqa: F821
+    favourites: Mapped[list["Favourite"]] = relationship(  # noqa: F821
+        "Favourite", back_populates="session"
+    )
 
 
 class DrillSession(Base):

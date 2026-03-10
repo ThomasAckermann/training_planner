@@ -70,6 +70,7 @@ export default function DrillEdit() {
   const stageRef = useRef(null);
 
   const [activeTab, setActiveTab] = useState("details");
+  const [drawingMounted, setDrawingMounted] = useState(false);
   const [equipment, setEquipment] = useState([]);
   const [skillTags, setSkillTags] = useState([]);
   const [tagInput, setTagInput] = useState("");
@@ -81,6 +82,10 @@ export default function DrillEdit() {
     register,
     formState: { errors, isSubmitting },
   } = useForm({ resolver: zodResolver(schema) });
+
+  useEffect(() => {
+    if (activeTab === "drawing") setDrawingMounted(true);
+  }, [activeTab]);
 
   useEffect(() => {
     if (drill && !formReady) {
@@ -492,9 +497,12 @@ export default function DrillEdit() {
         </form>
       )}
 
-      {/* ── Drawing tab ── */}
-      {activeTab === "drawing" && (
-        <div className="space-y-4">
+      {/* ── Drawing tab ── kept mounted once visited so stageRef stays valid */}
+      {drawingMounted && (
+        <div
+          className="space-y-4"
+          style={{ display: activeTab === "drawing" ? "" : "none" }}
+        >
           <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
             Draw a tactical diagram. Right-click icons or arrows to change color
             / delete. Double-click text labels to edit them.

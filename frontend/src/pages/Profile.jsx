@@ -1,10 +1,20 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Clock, Layers, MapPin, Trophy } from "lucide-react";
-import { useUserProfile } from "../hooks/useUsers.js";
+import {
+  ArrowLeft,
+  Clock,
+  Layers,
+  MapPin,
+  Trophy,
+  UserPlus,
+  UserCheck,
+} from "lucide-react";
+import { useUserProfile, useFollow } from "../hooks/useUsers.js";
 import { useDrills } from "../hooks/useDrills.js";
 import { useSessions } from "../hooks/useSessions.js";
+import useAuthStore from "../store/authStore.js";
 import Badge from "../components/ui/Badge.jsx";
+import Button from "../components/ui/Button.jsx";
 import Card from "../components/ui/Card.jsx";
 import { FOCUS_AREAS } from "../lib/constants.js";
 
@@ -19,12 +29,14 @@ export default function Profile() {
   const { userId } = useParams();
   const navigate = useNavigate();
   const [tab, setTab] = useState("sessions");
+  const currentUser = useAuthStore((state) => state.user);
 
   const {
     data: profile,
     isLoading: profileLoading,
     isError,
   } = useUserProfile(userId);
+  const follow = useFollow(userId);
   const { data: drillData, isLoading: drillsLoading } = useDrills({
     author_id: userId,
     limit: 50,
@@ -152,7 +164,7 @@ export default function Profile() {
             )}
           </div>
 
-          <div className="flex gap-4 mt-4">
+          <div className="flex flex-wrap gap-4 mt-4">
             <div className="text-center">
               <div
                 className="text-2xl font-bold"
@@ -195,6 +207,40 @@ export default function Profile() {
                   color: "var(--color-accent)",
                 }}
               >
+                {profile.follower_count ?? 0}
+              </div>
+              <div
+                className="text-xs"
+                style={{ color: "var(--color-text-muted)" }}
+              >
+                Followers
+              </div>
+            </div>
+            <div className="text-center">
+              <div
+                className="text-2xl font-bold"
+                style={{
+                  fontFamily: '"Bebas Neue", cursive',
+                  color: "var(--color-accent)",
+                }}
+              >
+                {profile.following_count ?? 0}
+              </div>
+              <div
+                className="text-xs"
+                style={{ color: "var(--color-text-muted)" }}
+              >
+                Following
+              </div>
+            </div>
+            <div className="text-center">
+              <div
+                className="text-2xl font-bold"
+                style={{
+                  fontFamily: '"Bebas Neue", cursive',
+                  color: "var(--color-accent)",
+                }}
+              >
                 {joinYear}
               </div>
               <div
@@ -205,6 +251,31 @@ export default function Profile() {
               </div>
             </div>
           </div>
+
+          {/* Follow button */}
+          {currentUser && currentUser.id !== userId && (
+            <div className="mt-4">
+              <Button
+                variant={profile.is_following ? "secondary" : "primary"}
+                size="sm"
+                loading={follow.isPending}
+                onClick={() => follow.mutate()}
+                className="flex items-center gap-1.5"
+              >
+                {profile.is_following ? (
+                  <>
+                    <UserCheck className="w-4 h-4" />
+                    Following
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="w-4 h-4" />
+                    Follow
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 

@@ -1,6 +1,7 @@
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
+  Bookmark,
   Clock,
   ExternalLink,
   Heart,
@@ -8,11 +9,25 @@ import {
   Trash2,
   Users,
 } from "lucide-react";
-import { useDrill, useDeleteDrill, useLikeDrill } from "../hooks/useDrills.js";
+import {
+  useDrill,
+  useDeleteDrill,
+  useLikeDrill,
+  useRateDrill,
+} from "../hooks/useDrills.js";
+import { useFavouriteDrill } from "../hooks/useFavourites.js";
+import { useUserProfile } from "../hooks/useUsers.js";
+import StarRating from "../components/drill/StarRating.jsx";
+import {
+  useDrillComments,
+  useCreateDrillComment,
+  useDeleteComment,
+} from "../hooks/useComments.js";
 import useAuthStore from "../store/authStore.js";
 import Badge from "../components/ui/Badge.jsx";
 import Button from "../components/ui/Button.jsx";
 import Card from "../components/ui/Card.jsx";
+import CommentThread from "../components/common/CommentThread.jsx";
 import { FOCUS_AREAS } from "../lib/constants.js";
 
 function getYouTubeEmbedUrl(url) {
@@ -34,9 +49,15 @@ export default function DrillDetail() {
 
   const isOwner = user && drill && user.id === drill.user_id;
   const embedUrl = getYouTubeEmbedUrl(drill?.video_url);
+  const { data: author } = useUserProfile(drill?.user_id);
+  const rateDrill = useRateDrill();
   const focusLabel =
     FOCUS_AREAS.find((f) => f.value === drill?.focus_area)?.label ??
     drill?.focus_area;
+  const favouriteDrill = useFavouriteDrill();
+  const { data: comments } = useDrillComments(id);
+  const createComment = useCreateDrillComment(id);
+  const deleteComment = useDeleteComment(["comments", "drill", id]);
 
   async function handleDelete() {
     if (!confirm("Delete this drill? This action cannot be undone.")) return;
@@ -101,6 +122,23 @@ export default function DrillDetail() {
           {drill.title}
         </h1>
 
+        {/* Author */}
+        {author && (
+          <p
+            className="text-sm mb-3"
+            style={{ color: "var(--color-text-muted)" }}
+          >
+            By{" "}
+            <Link
+              to={`/profile/${drill.user_id}`}
+              className="hover:underline"
+              style={{ color: "var(--color-accent)" }}
+            >
+              {author.name}
+            </Link>
+          </p>
+        )}
+
         {/* Actions row */}
         <div className="flex flex-wrap items-center gap-3">
           {/* Like button */}
@@ -117,6 +155,23 @@ export default function DrillDetail() {
             />
             <span>{drill.likes_count}</span>
           </Button>
+
+          {/* Favourite button */}
+          {user && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => favouriteDrill.mutate(id)}
+              loading={favouriteDrill.isPending}
+              className="gap-1.5"
+              title="Bookmark this drill"
+            >
+              <Bookmark
+                className="w-4 h-4"
+                style={{ color: "var(--color-accent)" }}
+              />
+            </Button>
+          )}
 
           {isOwner && (
             <>
@@ -139,6 +194,16 @@ export default function DrillDetail() {
               </Button>
             </>
           )}
+        </div>
+
+        {/* Star rating */}
+        <div className="mt-3">
+          <StarRating
+            avgRating={drill.avg_rating}
+            ratingCount={drill.rating_count}
+            onRate={user ? (score) => rateDrill.mutate({ id, score }) : null}
+            loading={rateDrill.isPending}
+          />
         </div>
       </div>
 
@@ -231,7 +296,7 @@ export default function DrillDetail() {
           )}
         </div>
 
-        {/* Sidebar meta */}
+        {/* Sidebar */}
         <div className="space-y-4">
           <Card>
             <h3
@@ -323,6 +388,23 @@ export default function DrillDetail() {
             </Card>
           )}
         </div>
+      </div>
+
+      {/* Comments */}
+      <div
+        className="mt-10 pt-8 border-t"
+        style={{ borderColor: "var(--color-border)" }}
+      >
+        <CommentThread
+          comments={comments ?? []}
+          onPost={(body) => createComment.mutate({ body })}
+          onDelete={(commentId) => deleteComment.mutate(commentId)}
+          onReply={(parentId, body) =>
+            createComment.mutate({ body, parent_id: parentId })
+          }
+          isPosting={createComment.isPending}
+          contentOwnerId={drill.user_id}
+        />
       </div>
     </div>
   );

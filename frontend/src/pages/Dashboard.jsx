@@ -9,9 +9,17 @@ import {
   EyeOff,
   Layers,
   Clock,
+  BarChart2,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
-import { useMyDrills, useDeleteDrill } from "../hooks/useDrills.js";
+import {
+  useMyDrills,
+  useDeleteDrill,
+  useDrillAnalytics,
+} from "../hooks/useDrills.js";
 import { useMySessions, useDeleteSession } from "../hooks/useSessions.js";
+import { useMyFavourites } from "../hooks/useFavourites.js";
 import useAuthStore from "../store/authStore.js";
 import DrillFilters from "../components/drill/DrillFilters.jsx";
 import Badge from "../components/ui/Badge.jsx";
@@ -55,6 +63,10 @@ export default function Dashboard() {
     useMyDrills(drillFilters);
   const { data: sessionData, isLoading: sessionsLoading } =
     useMySessions(sessionFilters);
+  const { data: favourites } = useMyFavourites();
+  const { data: analyticsData } = useDrillAnalytics();
+  const [analyticsSortKey, setAnalyticsSortKey] = useState("view_count");
+  const [analyticsSortAsc, setAnalyticsSortAsc] = useState(false);
   const deleteDrill = useDeleteDrill();
   const deleteSession = useDeleteSession();
 
@@ -157,6 +169,8 @@ export default function Dashboard() {
         {[
           { key: "sessions", label: "My Sessions" },
           { key: "drills", label: "My Drills" },
+          { key: "favourites", label: "Favourites" },
+          { key: "analytics", label: "Analytics" },
         ].map(({ key, label }) => (
           <button
             key={key}
@@ -340,6 +354,259 @@ export default function Dashboard() {
                   </div>
                 </Card>
               ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* ── Favourites ── */}
+      {tab === "favourites" && (
+        <section className="mb-12">
+          <h2
+            className="text-2xl tracking-wide mb-4"
+            style={{
+              fontFamily: '"Bebas Neue", cursive',
+              color: "var(--color-text)",
+            }}
+          >
+            Favourite Drills
+          </h2>
+          {(favourites?.drills ?? []).length === 0 ? (
+            <p
+              style={{ color: "var(--color-text-muted)" }}
+              className="text-sm mb-8"
+            >
+              No favourite drills yet. Bookmark drills to find them here.
+            </p>
+          ) : (
+            <div className="space-y-3 mb-8">
+              {(favourites?.drills ?? []).map((drill) => {
+                const focusLabel =
+                  FOCUS_AREAS.find((f) => f.value === drill.focus_area)
+                    ?.label ?? drill.focus_area;
+                return (
+                  <Card
+                    key={drill.id}
+                    hoverable
+                    className="cursor-pointer"
+                    onClick={() => navigate(`/drills/${drill.id}`)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <span
+                          className="font-semibold"
+                          style={{ color: "var(--color-text)" }}
+                        >
+                          {drill.title}
+                        </span>
+                        <div className="flex flex-wrap gap-1.5 mt-1">
+                          {drill.focus_area && (
+                            <Badge variant="focus">{focusLabel}</Badge>
+                          )}
+                          {drill.skill_level && (
+                            <Badge variant="skill">{drill.skill_level}</Badge>
+                          )}
+                          {drill.age_range && (
+                            <Badge variant="age">{drill.age_range}</Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+
+          <h2
+            className="text-2xl tracking-wide mb-4"
+            style={{
+              fontFamily: '"Bebas Neue", cursive',
+              color: "var(--color-text)",
+            }}
+          >
+            Favourite Sessions
+          </h2>
+          {(favourites?.sessions ?? []).length === 0 ? (
+            <p style={{ color: "var(--color-text-muted)" }} className="text-sm">
+              No favourite sessions yet. Bookmark sessions to find them here.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {(favourites?.sessions ?? []).map((session) => (
+                <Card
+                  key={session.id}
+                  hoverable
+                  className="cursor-pointer"
+                  onClick={() => navigate(`/sessions/${session.id}`)}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <span
+                        className="font-semibold"
+                        style={{ color: "var(--color-text)" }}
+                      >
+                        {session.title}
+                      </span>
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {session.skill_level && (
+                          <Badge variant="skill">{session.skill_level}</Badge>
+                        )}
+                        {session.age_range && (
+                          <Badge variant="age">{session.age_range}</Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* ── Analytics ── */}
+      {tab === "analytics" && (
+        <section className="mb-12">
+          <h2
+            className="text-2xl tracking-wide mb-4"
+            style={{
+              fontFamily: '"Bebas Neue", cursive',
+              color: "var(--color-text)",
+            }}
+          >
+            Drill Analytics
+          </h2>
+          {!analyticsData || analyticsData.length === 0 ? (
+            <div
+              className="text-center py-14 rounded-xl border"
+              style={{
+                borderColor: "var(--color-border)",
+                backgroundColor: "var(--color-surface)",
+              }}
+            >
+              <div className="text-4xl mb-3">📊</div>
+              <p style={{ color: "var(--color-text-muted)" }}>
+                Create some drills to see analytics here.
+              </p>
+            </div>
+          ) : (
+            <div
+              className="rounded-xl border overflow-x-auto"
+              style={{
+                borderColor: "var(--color-border)",
+                backgroundColor: "var(--color-surface)",
+              }}
+            >
+              <table className="w-full text-sm">
+                <thead>
+                  <tr
+                    style={{
+                      borderBottom: "1px solid var(--color-border)",
+                      color: "var(--color-text-muted)",
+                    }}
+                  >
+                    {[
+                      { key: "title", label: "Drill" },
+                      { key: "view_count", label: "Views" },
+                      { key: "likes_count", label: "Likes" },
+                      { key: "avg_rating", label: "Avg Rating" },
+                      { key: "session_count", label: "In Sessions" },
+                    ].map(({ key, label }) => (
+                      <th
+                        key={key}
+                        className="px-4 py-3 text-left cursor-pointer hover:opacity-80 select-none"
+                        onClick={() => {
+                          if (analyticsSortKey === key) {
+                            setAnalyticsSortAsc((a) => !a);
+                          } else {
+                            setAnalyticsSortKey(key);
+                            setAnalyticsSortAsc(false);
+                          }
+                        }}
+                        style={{
+                          fontFamily: '"JetBrains Mono", monospace',
+                          fontSize: "0.7rem",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                        }}
+                      >
+                        <span className="flex items-center gap-1">
+                          {label}
+                          {analyticsSortKey === key &&
+                            (analyticsSortAsc ? (
+                              <ChevronUp className="w-3 h-3" />
+                            ) : (
+                              <ChevronDown className="w-3 h-3" />
+                            ))}
+                        </span>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...analyticsData]
+                    .sort((a, b) => {
+                      const av = a[analyticsSortKey] ?? 0;
+                      const bv = b[analyticsSortKey] ?? 0;
+                      if (analyticsSortKey === "title") {
+                        return analyticsSortAsc
+                          ? av.localeCompare(bv)
+                          : bv.localeCompare(av);
+                      }
+                      return analyticsSortAsc ? av - bv : bv - av;
+                    })
+                    .map((row, i) => (
+                      <tr
+                        key={row.id}
+                        className="cursor-pointer hover:opacity-80"
+                        style={{
+                          borderTop:
+                            i > 0 ? "1px solid var(--color-border)" : undefined,
+                        }}
+                        onClick={() => navigate(`/drills/${row.id}`)}
+                      >
+                        <td
+                          className="px-4 py-3 font-medium truncate max-w-xs"
+                          style={{ color: "var(--color-text)" }}
+                        >
+                          {row.title}
+                        </td>
+                        <td
+                          className="px-4 py-3"
+                          style={{ color: "var(--color-text-muted)" }}
+                        >
+                          <span className="flex items-center gap-1">
+                            <Eye className="w-3.5 h-3.5" />
+                            {row.view_count}
+                          </span>
+                        </td>
+                        <td
+                          className="px-4 py-3"
+                          style={{ color: "var(--color-text-muted)" }}
+                        >
+                          ♥ {row.likes_count}
+                        </td>
+                        <td
+                          className="px-4 py-3"
+                          style={{ color: "var(--color-text-muted)" }}
+                        >
+                          {row.avg_rating != null
+                            ? `★ ${row.avg_rating.toFixed(1)} (${
+                                row.rating_count
+                              })`
+                            : "—"}
+                        </td>
+                        <td
+                          className="px-4 py-3"
+                          style={{ color: "var(--color-text-muted)" }}
+                        >
+                          {row.session_count}
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
             </div>
           )}
         </section>

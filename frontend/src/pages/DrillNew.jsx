@@ -1,4 +1,4 @@
-import { lazy, Suspense, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -71,9 +71,14 @@ export default function DrillNew() {
   } = useDrawingStore();
 
   const [activeTab, setActiveTab] = useState("details");
+  const [drawingMounted, setDrawingMounted] = useState(false);
   const [equipment, setEquipment] = useState([]);
   const [skillTags, setSkillTags] = useState([]);
   const [tagInput, setTagInput] = useState("");
+
+  useEffect(() => {
+    if (activeTab === "drawing") setDrawingMounted(true);
+  }, [activeTab]);
 
   const {
     register,
@@ -459,9 +464,12 @@ export default function DrillNew() {
         </form>
       )}
 
-      {/* ── Drawing tab ── */}
-      {activeTab === "drawing" && (
-        <div className="space-y-4">
+      {/* ── Drawing tab ── kept mounted once visited so stageRef stays valid at submit */}
+      {drawingMounted && (
+        <div
+          className="space-y-4"
+          style={{ display: activeTab === "drawing" ? "" : "none" }}
+        >
           <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
             Draw a tactical diagram for this drill. The drawing will be saved
             automatically when you create the drill.

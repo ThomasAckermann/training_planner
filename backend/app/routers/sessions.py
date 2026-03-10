@@ -14,7 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.database import get_db
 from app.deps import get_current_user, get_current_user_optional
-from app.models.drill import AgeRange, Drill, Like, SkillLevel
+from app.models.drill import AgeRange, Drill, Favourite, Like, SkillLevel
+from app.models.comment import Comment
 from app.models.session import DrillSession, Session
 from app.models.user import User
 from app.schemas.session import (
@@ -27,6 +28,7 @@ from app.schemas.session import (
     UpdateDrillInSession,
     DrillInSession,
 )
+from app.schemas.comment import CommentAuthor, CommentCreate, CommentOut
 
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 
@@ -561,6 +563,122 @@ async def remove_drill_from_session(
 
     await db.flush()
     return await _session_to_out(db, session)
+
+
+@router.post("/{session_id}/favourite")
+async def toggle_favourite_session(
+    session_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    result = await db.execute(select(Session).where(Session.id == session_id))
+    session = result.scalar_one_or_none()
+
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
+        )
+
+    existing_result = await db.execute(
+        select(Favourite).where(
+            Favourite.session_id == session_id,
+            Favourite.user_id == current_user.id,
+        )
+    )
+    existing = existing_result.scalar_one_or_none()
+
+    if existing:
+        await db.delete(existing)
+        return {"favourited": False}
+    else:
+        fav = Favourite(user_id=current_user.id, session_id=session_id)
+        db.add(fav)
+        return {"favourited": True}
+
+
+async def _comment_to_out(db: AsyncSession, comment: Comment) -> CommentOut:
+    user_result = await db.execute(select(User).where(User.id == comment.user_id))
+    user = user_result.scalar_one_or_none()
+    author = (
+        CommentAuthor(id=user.id, name=user.name, avatar_url=user.avatar_url)
+        if user
+        else CommentAuthor(id=comment.user_id, name="Unknown")
+    )
+
+    replies_result = await db.execute(
+        select(Comment)
+        .where(Comment.parent_id == comment.id)
+        .order_by(Comment.created_at.asc())
+    )
+    replies = [await _comment_to_out(db, r) for r in replies_result.scalars().all()]
+
+    return CommentOut(
+        id=comment.id,
+        user_id=comment.user_id,
+        drill_id=comment.drill_id,
+        session_id=comment.session_id,
+        parent_id=comment.parent_id,
+        body=comment.body,
+        created_at=comment.created_at,
+        author=author,
+        replies=replies,
+    )
+
+
+@router.get("/{session_id}/comments", response_model=list[CommentOut])
+async def list_session_comments(
+    session_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional),
+) -> list[CommentOut]:
+    result = await db.execute(select(Session).where(Session.id == session_id))
+    session = result.scalar_one_or_none()
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
+        )
+    if not session.is_public:
+        if not current_user or session.user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
+            )
+
+    comments_result = await db.execute(
+        select(Comment)
+        .where(Comment.session_id == session_id, Comment.parent_id.is_(None))
+        .order_by(Comment.created_at.asc())
+    )
+    return [await _comment_to_out(db, c) for c in comments_result.scalars().all()]
+
+
+@router.post(
+    "/{session_id}/comments",
+    response_model=CommentOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_session_comment(
+    session_id: str,
+    body: CommentCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> CommentOut:
+    result = await db.execute(select(Session).where(Session.id == session_id))
+    session = result.scalar_one_or_none()
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
+        )
+
+    comment = Comment(
+        user_id=current_user.id,
+        session_id=session_id,
+        parent_id=body.parent_id,
+        body=body.body,
+    )
+    db.add(comment)
+    await db.flush()
+    await db.refresh(comment)
+    return await _comment_to_out(db, comment)
 
 
 class _SessionPDF(FPDF):
