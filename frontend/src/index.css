@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-bg:          #0d0d0d;   /* True black */
+  --color-surface:     #1a1a1a;   /* Dark charcoal cards */
+  --color-surface-2:   #222222;   /* Elevated surface */
+  --color-border:      #333333;   /* Subtle borders */
+  --color-accent:      #cc1414;   /* Team red */
+  --color-accent-2:    #ffffff;   /* White details */
+  --color-text:        #f0f0f0;   /* Primary text */
+  --color-text-muted:  #888888;   /* Secondary text */
+  --color-danger:      #ff3333;   /* Error red (brighter) */
+  --color-success:     #22cc44;   /* Success green */
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) var(--color-surface);
+}
+
+/* Focus ring */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
