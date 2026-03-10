@@ -1,4 +1,5 @@
 """Integration tests for /api/drills endpoints."""
+
 from tests.conftest import DRILL_PAYLOAD, USER1, USER2
 
 
@@ -73,7 +74,9 @@ async def test_get_nonexistent_drill_returns_404(client):
 async def test_update_drill_by_owner(client):
     await client.post("/api/auth/register", json=USER1)
     created = (await client.post("/api/drills", json=DRILL_PAYLOAD)).json()
-    r = await client.patch(f"/api/drills/{created['id']}", json={"title": "Updated Title"})
+    r = await client.patch(
+        f"/api/drills/{created['id']}", json={"title": "Updated Title"}
+    )
     assert r.status_code == 200
     assert r.json()["title"] == "Updated Title"
 

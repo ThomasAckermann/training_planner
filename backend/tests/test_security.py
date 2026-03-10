@@ -1,4 +1,5 @@
 """Pure unit tests for app/security.py — no database required."""
+
 from app.security import (
     create_access_token,
     create_refresh_token,

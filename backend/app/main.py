@@ -40,7 +40,9 @@ app.add_middleware(
 async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
     if settings.is_production:
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Strict-Transport-Security"] = (
+            "max-age=31536000; includeSubDomains"
+        )
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
     return response
@@ -80,7 +82,10 @@ if os.path.isdir(_frontend_dist):
     async def serve_spa(full_path: str) -> FileResponse:
         candidate = os.path.realpath(os.path.join(_frontend_dist_real, full_path))
         # Prevent path traversal: ensure candidate is inside the dist directory.
-        if not candidate.startswith(_frontend_dist_real + os.sep) and candidate != _frontend_dist_real:
+        if (
+            not candidate.startswith(_frontend_dist_real + os.sep)
+            and candidate != _frontend_dist_real
+        ):
             return FileResponse(os.path.join(_frontend_dist_real, "index.html"))
         if full_path and os.path.isfile(candidate):
             return FileResponse(candidate)

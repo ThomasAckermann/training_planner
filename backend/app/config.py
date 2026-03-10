@@ -12,7 +12,9 @@ class Settings(BaseSettings):
         case_sensitive=False,
     )
 
-    database_url: str = "postgresql+asyncpg://volleycoach:volleycoach@localhost:5432/volleycoach"
+    database_url: str = (
+        "postgresql+asyncpg://volleycoach:volleycoach@localhost:5432/volleycoach"
+    )
     jwt_secret: str = _DEFAULT_JWT_SECRET
     jwt_refresh_secret: str = _DEFAULT_JWT_REFRESH_SECRET
     upload_dir: str = "./uploads"
@@ -26,9 +28,13 @@ class Settings(BaseSettings):
     def check_production_secrets(self) -> "Settings":
         if self.environment == "production":
             if self.jwt_secret == _DEFAULT_JWT_SECRET:
-                raise ValueError("JWT_SECRET must be set to a secure value in production")
+                raise ValueError(
+                    "JWT_SECRET must be set to a secure value in production"
+                )
             if self.jwt_refresh_secret == _DEFAULT_JWT_REFRESH_SECRET:
-                raise ValueError("JWT_REFRESH_SECRET must be set to a secure value in production")
+                raise ValueError(
+                    "JWT_REFRESH_SECRET must be set to a secure value in production"
+                )
         return self
 
     @property

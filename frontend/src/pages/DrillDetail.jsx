@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   Clock,
@@ -7,40 +7,41 @@ import {
   Pencil,
   Trash2,
   Users,
-} from 'lucide-react'
-import { useDrill, useDeleteDrill, useLikeDrill } from '../hooks/useDrills.js'
-import useAuthStore from '../store/authStore.js'
-import Badge from '../components/ui/Badge.jsx'
-import Button from '../components/ui/Button.jsx'
-import Card from '../components/ui/Card.jsx'
-import { FOCUS_AREAS } from '../lib/constants.js'
+} from "lucide-react";
+import { useDrill, useDeleteDrill, useLikeDrill } from "../hooks/useDrills.js";
+import useAuthStore from "../store/authStore.js";
+import Badge from "../components/ui/Badge.jsx";
+import Button from "../components/ui/Button.jsx";
+import Card from "../components/ui/Card.jsx";
+import { FOCUS_AREAS } from "../lib/constants.js";
 
 function getYouTubeEmbedUrl(url) {
-  if (!url) return null
+  if (!url) return null;
   const match = url.match(
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]{11})/
-  )
-  if (match) return `https://www.youtube.com/embed/${match[1]}`
-  return null
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]{11})/,
+  );
+  if (match) return `https://www.youtube.com/embed/${match[1]}`;
+  return null;
 }
 
 export default function DrillDetail() {
-  const { id } = useParams()
-  const navigate = useNavigate()
-  const user = useAuthStore((state) => state.user)
-  const { data: drill, isLoading, isError } = useDrill(id)
-  const deleteDrill = useDeleteDrill()
-  const likeDrill = useLikeDrill()
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const user = useAuthStore((state) => state.user);
+  const { data: drill, isLoading, isError } = useDrill(id);
+  const deleteDrill = useDeleteDrill();
+  const likeDrill = useLikeDrill();
 
-  const isOwner = user && drill && user.id === drill.user_id
-  const embedUrl = getYouTubeEmbedUrl(drill?.video_url)
+  const isOwner = user && drill && user.id === drill.user_id;
+  const embedUrl = getYouTubeEmbedUrl(drill?.video_url);
   const focusLabel =
-    FOCUS_AREAS.find((f) => f.value === drill?.focus_area)?.label ?? drill?.focus_area
+    FOCUS_AREAS.find((f) => f.value === drill?.focus_area)?.label ??
+    drill?.focus_area;
 
   async function handleDelete() {
-    if (!confirm('Delete this drill? This action cannot be undone.')) return
-    await deleteDrill.mutateAsync(id)
-    navigate('/explore')
+    if (!confirm("Delete this drill? This action cannot be undone.")) return;
+    await deleteDrill.mutateAsync(id);
+    navigate("/explore");
   }
 
   if (isLoading) {
@@ -54,18 +55,18 @@ export default function DrillDetail() {
         </div>
         <div className="h-40 w-full bg-surface rounded-xl" />
       </div>
-    )
+    );
   }
 
   if (isError || !drill) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-20 text-center">
         <p className="text-danger text-lg mb-4">Drill not found</p>
-        <Button variant="secondary" onClick={() => navigate('/explore')}>
+        <Button variant="secondary" onClick={() => navigate("/explore")}>
           Back to Explore
         </Button>
       </div>
-    )
+    );
   }
 
   return (
@@ -74,7 +75,7 @@ export default function DrillDetail() {
       <button
         onClick={() => navigate(-1)}
         className="flex items-center gap-1.5 mb-6 text-sm transition-colors hover:text-accent"
-        style={{ color: 'var(--color-text-muted)' }}
+        style={{ color: "var(--color-text-muted)" }}
       >
         <ArrowLeft className="w-4 h-4" />
         Back
@@ -84,13 +85,18 @@ export default function DrillDetail() {
       <div className="mb-6">
         <div className="flex flex-wrap gap-2 mb-3">
           {drill.focus_area && <Badge variant="focus">{focusLabel}</Badge>}
-          {drill.skill_level && <Badge variant="skill">{drill.skill_level}</Badge>}
+          {drill.skill_level && (
+            <Badge variant="skill">{drill.skill_level}</Badge>
+          )}
           {drill.age_range && <Badge variant="age">{drill.age_range}</Badge>}
           {!drill.is_public && <Badge>Draft</Badge>}
         </div>
         <h1
           className="text-4xl sm:text-5xl mb-4"
-          style={{ fontFamily: '"Bebas Neue", cursive', color: 'var(--color-text)' }}
+          style={{
+            fontFamily: '"Bebas Neue", cursive',
+            color: "var(--color-text)",
+          }}
         >
           {drill.title}
         </h1>
@@ -105,7 +111,10 @@ export default function DrillDetail() {
             loading={likeDrill.isPending}
             className="gap-1.5"
           >
-            <Heart className="w-4 h-4" style={{ color: 'var(--color-danger)' }} />
+            <Heart
+              className="w-4 h-4"
+              style={{ color: "var(--color-danger)" }}
+            />
             <span>{drill.likes_count}</span>
           </Button>
 
@@ -141,16 +150,19 @@ export default function DrillDetail() {
             <Card>
               <h2
                 className="text-lg font-semibold mb-3"
-                style={{ color: 'var(--color-text-primary)' }}
+                style={{ color: "var(--color-text-primary)" }}
               >
                 Tactical Diagram
               </h2>
-              <div className="rounded-lg overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
+              <div
+                className="rounded-lg overflow-hidden"
+                style={{ border: "1px solid var(--color-border)" }}
+              >
                 <img
                   src={drill.drawing_thumb_url}
                   alt="Tactical diagram"
                   className="w-full"
-                  style={{ display: 'block' }}
+                  style={{ display: "block" }}
                 />
               </div>
             </Card>
@@ -161,13 +173,16 @@ export default function DrillDetail() {
             <Card>
               <h2
                 className="text-lg font-semibold mb-3"
-                style={{ color: 'var(--color-text-primary)' }}
+                style={{ color: "var(--color-text-primary)" }}
               >
                 Description
               </h2>
               <p
                 className="text-sm leading-relaxed whitespace-pre-line"
-                style={{ color: 'var(--color-text-muted)', fontFamily: 'Lora, serif' }}
+                style={{
+                  color: "var(--color-text-muted)",
+                  fontFamily: "Lora, serif",
+                }}
               >
                 {drill.description}
               </p>
@@ -179,7 +194,7 @@ export default function DrillDetail() {
             <Card>
               <h2
                 className="text-lg font-semibold mb-3"
-                style={{ color: 'var(--color-text-primary)' }}
+                style={{ color: "var(--color-text-primary)" }}
               >
                 Video Demo
               </h2>
@@ -199,7 +214,7 @@ export default function DrillDetail() {
             <Card>
               <h2
                 className="text-lg font-semibold mb-3"
-                style={{ color: 'var(--color-text-primary)' }}
+                style={{ color: "var(--color-text-primary)" }}
               >
                 Video
               </h2>
@@ -221,30 +236,49 @@ export default function DrillDetail() {
           <Card>
             <h3
               className="text-sm font-semibold mb-3 uppercase tracking-wider"
-              style={{ color: 'var(--color-text-muted)', fontFamily: '"JetBrains Mono", monospace' }}
+              style={{
+                color: "var(--color-text-muted)",
+                fontFamily: '"JetBrains Mono", monospace',
+              }}
             >
               Details
             </h3>
             <div className="space-y-3">
               {drill.duration_minutes && (
                 <div className="flex items-center gap-2 text-sm">
-                  <Clock className="w-4 h-4" style={{ color: 'var(--color-accent)' }} />
-                  <span style={{ color: 'var(--color-text-muted)' }}>Duration</span>
-                  <span className="ml-auto font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                  <Clock
+                    className="w-4 h-4"
+                    style={{ color: "var(--color-accent)" }}
+                  />
+                  <span style={{ color: "var(--color-text-muted)" }}>
+                    Duration
+                  </span>
+                  <span
+                    className="ml-auto font-medium"
+                    style={{ color: "var(--color-text-primary)" }}
+                  >
                     {drill.duration_minutes} min
                   </span>
                 </div>
               )}
               {(drill.num_players_min || drill.num_players_max) && (
                 <div className="flex items-center gap-2 text-sm">
-                  <Users className="w-4 h-4" style={{ color: 'var(--color-accent)' }} />
-                  <span style={{ color: 'var(--color-text-muted)' }}>Players</span>
-                  <span className="ml-auto font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                  <Users
+                    className="w-4 h-4"
+                    style={{ color: "var(--color-accent)" }}
+                  />
+                  <span style={{ color: "var(--color-text-muted)" }}>
+                    Players
+                  </span>
+                  <span
+                    className="ml-auto font-medium"
+                    style={{ color: "var(--color-text-primary)" }}
+                  >
                     {drill.num_players_min && drill.num_players_max
                       ? `${drill.num_players_min}–${drill.num_players_max}`
                       : drill.num_players_min
-                      ? `${drill.num_players_min}+`
-                      : `≤${drill.num_players_max}`}
+                        ? `${drill.num_players_min}+`
+                        : `≤${drill.num_players_max}`}
                   </span>
                 </div>
               )}
@@ -255,7 +289,10 @@ export default function DrillDetail() {
             <Card>
               <h3
                 className="text-sm font-semibold mb-3 uppercase tracking-wider"
-                style={{ color: 'var(--color-text-muted)', fontFamily: '"JetBrains Mono", monospace' }}
+                style={{
+                  color: "var(--color-text-muted)",
+                  fontFamily: '"JetBrains Mono", monospace',
+                }}
               >
                 Equipment
               </h3>
@@ -271,7 +308,10 @@ export default function DrillDetail() {
             <Card>
               <h3
                 className="text-sm font-semibold mb-3 uppercase tracking-wider"
-                style={{ color: 'var(--color-text-muted)', fontFamily: '"JetBrains Mono", monospace' }}
+                style={{
+                  color: "var(--color-text-muted)",
+                  fontFamily: '"JetBrains Mono", monospace',
+                }}
               >
                 Tags
               </h3>
@@ -285,5 +325,5 @@ export default function DrillDetail() {
         </div>
       </div>
     </div>
-  )
+  );
 }

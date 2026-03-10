@@ -1,4 +1,5 @@
 """Integration tests for /api/users endpoints."""
+
 import io
 
 from tests.conftest import USER1
@@ -20,10 +21,7 @@ async def test_get_nonexistent_user_returns_404(client):
 
 
 async def test_avatar_upload_requires_auth(client):
-    png_bytes = (
-        b"\x89PNG\r\n\x1a\n"
-        + b"\x00" * 100  # minimal fake PNG body
-    )
+    png_bytes = b"\x89PNG\r\n\x1a\n" + b"\x00" * 100  # minimal fake PNG body
     r = await client.post(
         "/api/users/me/avatar",
         files={"file": ("avatar.png", io.BytesIO(png_bytes), "image/png")},

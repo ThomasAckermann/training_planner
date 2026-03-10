@@ -3,7 +3,16 @@ import math
 import os
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -100,7 +109,9 @@ async def list_drills(
     items = [await _drill_to_out(db, d) for d in drills]
     pages = math.ceil(total / limit) if total > 0 else 1
 
-    return DrillListResponse(items=items, total=total, page=page, limit=limit, pages=pages)
+    return DrillListResponse(
+        items=items, total=total, page=page, limit=limit, pages=pages
+    )
 
 
 @router.get("/mine", response_model=DrillListResponse)
@@ -140,7 +151,9 @@ async def list_my_drills(
     items = [await _drill_to_out(db, d) for d in drills]
     pages = math.ceil(total / limit) if total > 0 else 1
 
-    return DrillListResponse(items=items, total=total, page=page, limit=limit, pages=pages)
+    return DrillListResponse(
+        items=items, total=total, page=page, limit=limit, pages=pages
+    )
 
 
 @router.get("/{drill_id}", response_model=DrillOut)
@@ -153,7 +166,9 @@ async def get_drill(
     drill = result.scalar_one_or_none()
 
     if not drill:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Drill not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Drill not found"
+        )
 
     if not drill.is_public:
         if not current_user or drill.user_id != current_user.id:
@@ -203,7 +218,9 @@ async def update_drill(
     drill = result.scalar_one_or_none()
 
     if not drill:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Drill not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Drill not found"
+        )
 
     if drill.user_id != current_user.id:
         raise HTTPException(
@@ -231,7 +248,9 @@ async def delete_drill(
     drill = result.scalar_one_or_none()
 
     if not drill:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Drill not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Drill not found"
+        )
 
     if drill.user_id != current_user.id:
         raise HTTPException(
@@ -257,7 +276,9 @@ async def toggle_like(
     drill = result.scalar_one_or_none()
 
     if not drill:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Drill not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Drill not found"
+        )
 
     existing_result = await db.execute(
         select(Like).where(
@@ -288,15 +309,22 @@ async def save_drawing(
     drill = result.scalar_one_or_none()
 
     if not drill:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Drill not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Drill not found"
+        )
 
     if drill.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
+        )
 
     try:
         drill.drawing_json = json.loads(drawing_json)
     except json.JSONDecodeError:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid drawing JSON")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Invalid drawing JSON",
+        )
 
     if thumbnail:
         thumb_dir = os.path.join(settings.upload_dir, "thumbnails")

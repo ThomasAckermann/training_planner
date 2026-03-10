@@ -9,6 +9,7 @@ A collaborative web platform for volleyball coaches to create, share, and discov
 ## Tech Stack
 
 ### Frontend
+
 - **Framework**: React (Vite)
 - **Styling**: Tailwind CSS + custom CSS variables
 - **State Management**: Zustand (global store) + React Query (server state)
@@ -20,6 +21,7 @@ A collaborative web platform for volleyball coaches to create, share, and discov
 - **Notifications**: react-hot-toast
 
 ### Backend
+
 - **Runtime**: Python — FastAPI
 - **ORM**: SQLAlchemy + Alembic (migrations)
 - **Database**: PostgreSQL (self-hosted via Docker Compose)
@@ -28,6 +30,7 @@ A collaborative web platform for volleyball coaches to create, share, and discov
 - **API**: RESTful JSON API
 
 ### DevOps / Infrastructure
+
 - **Containerization**: Docker + Docker Compose (`postgres`, `backend`, `frontend`)
 - **Deployment**: Railway (Git-push deploys, free tier, handles FastAPI + Postgres well)
 - **CI**: GitHub Actions (lint on PR; tests deferred until post-MVP)
@@ -37,6 +40,7 @@ A collaborative web platform for volleyball coaches to create, share, and discov
 ## Core Features
 
 ### 1. Authentication & User Profiles
+
 - Register / Login / Logout
 - JWT stored in httpOnly cookies (not localStorage)
 - User profile: name, club, country, coaching level (C, B, A license)
@@ -44,6 +48,7 @@ A collaborative web platform for volleyball coaches to create, share, and discov
 - Public profile page showing all published sessions by that coach
 
 ### 2. Drill Library
+
 A drill is the atomic unit — a single exercise or activity.
 
 **Drill fields:**
@@ -68,6 +73,7 @@ A drill is the atomic unit — a single exercise or activity.
 | `created_at` | datetime | |
 
 ### 3. Training Session Planner
+
 A session groups multiple drills into a structured training unit.
 
 **Session fields:**
@@ -87,6 +93,7 @@ A session groups multiple drills into a structured training unit.
 | `created_by` | userId | |
 
 **DrillSession (junction):**
+
 ```
 {
   drill_id,
@@ -97,9 +104,11 @@ A session groups multiple drills into a structured training unit.
 ```
 
 ### 4. Field Drawing Tool
+
 The most unique feature — an interactive volleyball court canvas where coaches draw tactical diagrams.
 
 **Canvas features:**
+
 - Full volleyball court rendered as SVG background (top-down view)
 - Drag-and-drop icon palette onto the court
 - Icons include:
@@ -118,6 +127,7 @@ The most unique feature — an interactive volleyball court canvas where coaches
 - Color picker per icon/arrow
 
 **Technical approach (react-konva):**
+
 ```jsx
 // Core structure
 <Stage width={800} height={600}>
@@ -125,10 +135,14 @@ The most unique feature — an interactive volleyball court canvas where coaches
     {/* SVG court lines rendered as Konva shapes */}
   </Layer>
   <Layer name="icons">
-    {icons.map(icon => <DraggableIcon key={icon.id} {...icon} />)}
+    {icons.map((icon) => (
+      <DraggableIcon key={icon.id} {...icon} />
+    ))}
   </Layer>
   <Layer name="arrows">
-    {arrows.map(arrow => <DraggableArrow key={arrow.id} {...arrow} />)}
+    {arrows.map((arrow) => (
+      <DraggableArrow key={arrow.id} {...arrow} />
+    ))}
   </Layer>
 </Stage>
 ```
@@ -252,6 +266,7 @@ enum FocusArea {
 ## API Endpoints
 
 ### Auth
+
 ```
 POST   /api/auth/register
 POST   /api/auth/login
@@ -261,6 +276,7 @@ GET    /api/auth/me
 ```
 
 ### Users
+
 ```
 GET    /api/users/:id             — public profile
 PATCH  /api/users/me              — update own profile
@@ -268,6 +284,7 @@ POST   /api/users/me/avatar       — upload avatar
 ```
 
 ### Drills
+
 ```
 GET    /api/drills                — list (public, with filters)
 POST   /api/drills                — create (auth required)
@@ -280,6 +297,7 @@ GET    /api/drills/mine           — own drills (auth)
 ```
 
 ### Sessions
+
 ```
 GET    /api/sessions              — list (public, with filters)
 POST   /api/sessions              — create (auth required)
@@ -294,6 +312,7 @@ GET    /api/sessions/mine         — own sessions (auth)
 ```
 
 ### Query Parameters (for list endpoints)
+
 ```
 ?ageRange=U16,ADULTS
 ?skillLevel=INTERMEDIATE
@@ -389,6 +408,7 @@ src/
 ### Icon Palette Categories
 
 **Players**
+
 - Setter (S) — yellow circle
 - Libero (L) — red circle
 - Outside Hitter (OH) — blue circle
@@ -398,11 +418,13 @@ src/
 - Coach — star shape
 
 **Objects**
+
 - Volleyball — circle with stitch pattern
 - Cone — triangle
 - Antenna — thin vertical line
 
 **Arrows / Movements**
+
 - Straight move arrow
 - Curved move arrow
 - Dashed line (ball trajectory)
@@ -410,11 +432,13 @@ src/
 - Double-headed arrow
 
 **Zones & Labels**
+
 - Zone markers 1–6
 - Free text label
 - Rectangle zone highlight
 
 ### Canvas Behavior
+
 1. **Drag from palette → drop on court**: creates a new icon at drop position
 2. **Click icon**: selects it, shows transform handles
 3. **Drag selected icon**: moves it
@@ -424,14 +448,17 @@ src/
 7. **Double-click arrow midpoint**: adds a bend point (Bezier curve)
 
 ### Undo/Redo
+
 Store history as an array of serialized stage snapshots (max 50 steps):
+
 ```js
-const { past, present, future } = drawingStore
+const { past, present, future } = drawingStore;
 // Ctrl+Z: pop from past, push present to future
 // Ctrl+Y: pop from future, push present to past
 ```
 
 ### Export
+
 - **PNG export**: `stage.toDataURL({ mimeType: 'image/png', pixelRatio: 2 })`
 - **JSON save**: `stage.toJSON()` → store in `drill.drawingJson`
 - **PDF export** (optional): use `jsPDF` + canvas image
@@ -441,31 +468,35 @@ const { past, present, future } = drawingStore
 ## Design System
 
 ### Visual Direction
+
 Sports-professional with a modern coach's notebook aesthetic. Think tactical chalkboard meets clean digital dashboard. Dark navy primary tones with sharp yellow-green accents (volleyball colors). Clean, high-contrast typography.
 
 ### Color Palette
+
 ```css
 :root {
-  --color-bg:          #0f1117;   /* Near-black navy */
-  --color-surface:     #1a1f2e;   /* Card background */
-  --color-surface-2:   #242938;   /* Elevated surface */
-  --color-border:      #2e3548;   /* Subtle borders */
-  --color-accent:      #c8f135;   /* Volleyball yellow-green */
-  --color-accent-2:    #4a9eff;   /* Blue highlight */
-  --color-text:        #e8ecf0;   /* Primary text */
-  --color-text-muted:  #7a8499;   /* Secondary text */
-  --color-danger:      #ff4d6d;
-  --color-success:     #00d68f;
+  --color-bg: #0f1117; /* Near-black navy */
+  --color-surface: #1a1f2e; /* Card background */
+  --color-surface-2: #242938; /* Elevated surface */
+  --color-border: #2e3548; /* Subtle borders */
+  --color-accent: #c8f135; /* Volleyball yellow-green */
+  --color-accent-2: #4a9eff; /* Blue highlight */
+  --color-text: #e8ecf0; /* Primary text */
+  --color-text-muted: #7a8499; /* Secondary text */
+  --color-danger: #ff4d6d;
+  --color-success: #00d68f;
 }
 ```
 
 ### Typography
+
 - **Display**: `Bebas Neue` (headings, scoreboard-style numbers)
 - **UI**: `DM Sans` (labels, buttons, navigation)
 - **Body**: `Lora` (drill descriptions, rich text)
 - **Mono**: `JetBrains Mono` (tags, codes)
 
 ### Skill Level Color Coding
+
 ```
 Beginner     → green  (#00d68f)
 Intermediate → blue   (#4a9eff)
@@ -474,6 +505,7 @@ Elite        → red    (#ff4d6d)
 ```
 
 ### Age Range Icons
+
 U12 🟡 · U14 🟠 · U16 🔵 · U18 🟣 · Adults ⚫ · All 🌐
 
 ---
@@ -481,9 +513,11 @@ U12 🟡 · U14 🟠 · U16 🔵 · U18 🟣 · Adults ⚫ · All 🌐
 ## Tag Taxonomy
 
 ### Focus Areas (primary)
+
 `serving` `reception` `setting` `attack` `block` `defense` `tactics` `fitness` `warmup` `fun` `mental`
 
 ### Sub-tags (secondary, free-choice)
+
 `back-row-attack` `jump-serve` `float-serve` `pipe` `quick-set` `libero-coverage` `rotation` `transition` `emergency-defense` `team-building` `communication`
 
 ---
@@ -491,6 +525,7 @@ U12 🟡 · U14 🟠 · U16 🔵 · U18 🟣 · Adults ⚫ · All 🌐
 ## Key Implementation Notes
 
 ### Security
+
 - Passwords hashed with `bcrypt` directly (do NOT use `passlib` — it is incompatible with `bcrypt>=4.0`)
 - Input validated server-side with Pydantic
 - Ownership checks on every mutating endpoint (user can only edit their own content)
@@ -498,22 +533,26 @@ U12 🟡 · U14 🟠 · U16 🔵 · U18 🟣 · Adults ⚫ · All 🌐
 - CORS restricted to frontend origin
 
 ### File Storage
+
 - **Local (dev/early prod)**: files saved to `backend/uploads/`, served via FastAPI static mount at `/static/uploads/`
 - **S3 (production)**: swap local write/read calls for `boto3` upload — abstracted behind a `StorageService` interface so the rest of the code doesn't change
 - Thumbnails are PNG exports from the drawing canvas, uploaded on save
 
 ### Frontend API calls
+
 - Axios `baseURL` must be `''` (empty string) — never point it directly at `http://localhost:8000`
 - All `/api/*` and `/static/*` requests are proxied through Vite's dev server to the backend (configured in `vite.config.js`)
 - The proxy target uses `process.env.BACKEND_URL` (no `VITE_` prefix) — env vars prefixed with `VITE_` are exposed to the browser bundle; `backend:8000` as a browser URL causes `ERR_NAME_NOT_RESOLVED` since Docker service names only resolve inside the Docker network
 
 ### Performance
+
 - Paginate all list endpoints (default 20 items/page)
 - Drawing JSON can get large — compress with LZ-string before storing
 - Lazy load drill drawings (only load Konva when drawing tab is active)
 - Use React.memo and useCallback liberally in the canvas component
 
 ### Accessibility
+
 - All icons have `aria-label`
 - Keyboard navigation for drill reordering in session (arrow keys)
 - Focus trap in modals
@@ -524,6 +563,7 @@ U12 🟡 · U14 🟠 · U16 🔵 · U18 🟣 · Adults ⚫ · All 🌐
 ## Development Order
 
 ### Phase 1 — Foundation ✅
+
 - [x] Docker Compose setup (`postgres`, `backend`, `frontend` services)
 - [x] FastAPI project structure (routers, models, schemas, dependencies)
 - [x] SQLAlchemy models + Alembic initial migration
@@ -533,11 +573,13 @@ U12 🟡 · U14 🟠 · U16 🔵 · U18 🟣 · Adults ⚫ · All 🌐
 - [x] Drill list + detail pages (read-only, no auth required)
 
 ### Phase 1.5 — My Drills & Edit (priority before Phase 2) ✅
+
 - [x] Dashboard page (`/me`) — lists all own drills (public + private drafts) with edit/delete actions
 - [x] Drill edit page (`/drills/:id/edit`) — pre-filled form, saves via PATCH
 - [x] Routes wired up in App.jsx and Navbar link added
 
 ### Phase 2 — Sessions & Discovery
+
 - [ ] Session CRUD API + pages
 - [ ] Drill picker UI: search/filter existing drills and add them to a session
 - [ ] Drag-to-reorder drills within a session (`@dnd-kit/sortable`)
@@ -548,7 +590,8 @@ U12 🟡 · U14 🟠 · U16 🔵 · U18 🟣 · Adults ⚫ · All 🌐
 - [ ] Local file upload endpoint (avatar, drill thumbnails → `uploads/`)
 - [ ] PDF export of a training session
 
-### Phase 3 — Drawing Tool *(required for MVP)*
+### Phase 3 — Drawing Tool _(required for MVP)_
+
 - [ ] Volleyball court canvas (`react-konva`)
 - [ ] Icon palette + drag-to-court (native HTML5 drag or pointer events)
 - [ ] Move / resize / rotate icons on canvas
@@ -557,6 +600,7 @@ U12 🟡 · U14 🟠 · U16 🔵 · U18 🟣 · Adults ⚫ · All 🌐
 - [ ] PNG export → POST to backend → saved locally, URL stored on drill
 
 ### Phase 4 — Polish & Go Live
+
 - [x] User profiles + public profile pages
 - [x] Dashboard (my drills, my sessions, liked content)
 - [ ] Responsive mobile layout
@@ -565,15 +609,18 @@ U12 🟡 · U14 🟠 · U16 🔵 · U18 🟣 · Adults ⚫ · All 🌐
 - [ ] Migrate file storage from local to AWS S3
 
 #### Railway Deployment (implemented)
+
 **Architecture: single Railway service** — multi-stage Dockerfile at repo root (Node builds frontend → Python copies `dist/` and serves via FastAPI). No reverse proxy needed; same-origin eliminates CORS.
 
 **Files created/modified:**
+
 - `Dockerfile` (root) — multi-stage build; `RUN rm -f package-lock.json && npm install` required (macOS lock file missing linux-musl rollup binary)
 - `railway.toml` — `dockerfilePath = "Dockerfile"`, healthcheck at `/health`
 - `backend/app/config.py` — added `frontend_dist_dir: str = "./frontend_dist"`
 - `backend/app/main.py` — catch-all SPA route active only when `frontend_dist/` dir exists (no effect locally)
 
 **Railway one-time manual setup:**
+
 1. Create project → Deploy from GitHub
 2. Add PostgreSQL plugin (auto-injects `DATABASE_URL`)
 3. Add Volume mounted at `/app/uploads`
@@ -582,6 +629,7 @@ U12 🟡 · U14 🟠 · U16 🔵 · U18 🟣 · Adults ⚫ · All 🌐
 **Cost:** Hobby plan $5/month (includes $5 resource credit — small app stays within it)
 
 ### Access Model
+
 - All public drills and sessions are **readable without login**
 - Auth is required to: create, edit, delete, like
 - This allows testing and demoing the app without accounts
@@ -591,9 +639,11 @@ U12 🟡 · U14 🟠 · U16 🔵 · U18 🟣 · Adults ⚫ · All 🌐
 ## Session Builder — Detailed Spec
 
 ### Concept
+
 A session is an ordered list of drills with a total duration, target age/skill level, and optional per-drill coach notes. Coaches build sessions by picking drills from their library (or public drills) and arranging them into a training plan.
 
 ### Session Builder UI (`/sessions/new`, `/sessions/:id/edit`)
+
 1. **Metadata form** — title, description, age range, skill level, focus areas (multi), team size, public toggle
 2. **Drill picker panel** — slide-out or inline panel showing drill library with search + filters; clicking a drill appends it to the session
 3. **Session drill list** — ordered list of added drills, each row showing:
@@ -606,6 +656,7 @@ A session is an ordered list of drills with a total duration, target age/skill l
 5. **Export button** — "Export PDF" → triggers PDF generation
 
 ### Key frontend components
+
 ```
 src/components/session/
 ├── SessionForm.jsx          # Metadata fields
@@ -616,7 +667,9 @@ src/components/session/
 ```
 
 ### Backend: Session API
+
 Already defined in API Endpoints section. Key additions:
+
 - `GET /api/sessions/:id` returns the full session with drills array (each drill fully populated, not just IDs)
 - `POST /api/sessions/:id/drills` — add a drill, returns updated session
 - `PATCH /api/sessions/:id/drills` — reorder (accepts `[{drill_session_id, order_index}]`)
@@ -628,21 +681,25 @@ Already defined in API Endpoints section. Key additions:
 ## PDF Export — Detailed Spec
 
 ### Approach: server-side generation with `WeasyPrint`
+
 Generate the PDF on the backend from an HTML template. This gives full control over layout and allows embedding drill thumbnails (drawing images).
 
 **Why server-side over client-side (`jsPDF`)**:
+
 - Can embed server-stored images (drawing thumbnails) without CORS issues
 - Consistent rendering regardless of browser
 - Cleaner pagination for long sessions
 - No large JS bundle on the frontend
 
 ### Backend implementation
+
 ```
 pip install weasyprint jinja2
 ```
 
 **Template** (`backend/templates/session_export.html`):
 Jinja2 HTML template styled with inline CSS (WeasyPrint doesn't support all CSS). Layout:
+
 - Header: session title, coach name, date, total duration, age/skill badges
 - For each drill (in order):
   - Drill title + focus area badge
@@ -653,6 +710,7 @@ Jinja2 HTML template styled with inline CSS (WeasyPrint doesn't support all CSS)
 - Footer: page numbers, "Generated with VC Planner"
 
 **Endpoint**:
+
 ```python
 # GET /api/sessions/:id/export/pdf
 @router.get("/{session_id}/export/pdf")
@@ -665,15 +723,19 @@ async def export_session_pdf(session_id: str, ...):
 ```
 
 ### Frontend
+
 Simple button on the session detail page:
+
 ```jsx
 <a href={`/api/sessions/${id}/export/pdf`} download>
   <Button variant="secondary">Export PDF</Button>
 </a>
 ```
+
 No special JS needed — the browser follows the link, the backend streams the PDF, the browser triggers a file download.
 
 ### PDF layout (print-ready A4)
+
 ```
 ┌─────────────────────────────────────────┐
 │  SESSION TITLE                    90min │
@@ -691,12 +753,14 @@ No special JS needed — the browser follows the link, the backend streams the P
 ```
 
 ### Python dependencies to add to `requirements.txt`
+
 ```
 weasyprint==62.3
 jinja2==3.1.4
 ```
 
 > **Note**: WeasyPrint requires system libraries (`libpango`, `libcairo`). Add to `backend/Dockerfile`:
+>
 > ```dockerfile
 > RUN apt-get update && apt-get install -y \
 >     libpango-1.0-0 libpangocairo-1.0-0 libcairo2 libgdk-pixbuf2.0-0 \
@@ -708,11 +772,13 @@ jinja2==3.1.4
 ## Future Ideas (Post-MVP)
 
 ### Social & Community Features
+
 - **Likes**: Heart button on drills and sessions — backend model (`Like`) and toggle endpoint already exist, needs frontend UI wired up properly
 - **Favourites**: Save drills/sessions to a personal favourites list (separate from likes — a like is public social signal, a favourite is a private bookmark). Requires a `Favourite` model (similar to `Like`) + a `/me/favourites` page
 - **Comments**: Threaded comments on drills and sessions. Requires a `Comment` model (`id`, `user_id`, `drill_id` or `session_id`, `body`, `created_at`, optional `parent_id` for replies). Frontend: comment thread component below drill detail, reply button, delete own comment. Moderation: owners can delete any comment on their content.
 
 ### Other Future Ideas
+
 - **OAuth / social login**: Google login (structure already supports it)
 - **AWS S3 migration**: Swap local storage for S3 (storage interface already abstracted)
 - **Team management**: Invite team members, assign sessions
@@ -745,6 +811,7 @@ docker compose down -v
 ```
 
 **Environment variables needed:**
+
 ```env
 # Backend (backend/.env)
 DATABASE_URL=postgresql+asyncpg://volleycoach:volleycoach@localhost:5432/volleycoach
@@ -764,4 +831,4 @@ FRONTEND_URL=http://localhost:5173
 
 ---
 
-*This document is the living specification for the Volleyball Coach Training Planner. Update it as features evolve.*
+_This document is the living specification for the Volleyball Coach Training Planner. Update it as features evolve._

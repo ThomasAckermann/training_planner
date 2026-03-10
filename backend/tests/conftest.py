@@ -15,21 +15,28 @@ database. With Docker Compose running locally:
   docker compose exec postgres psql -U volleycoach -c "CREATE DATABASE volleycoach_test;"
   docker compose exec -e TESTING=1 backend pytest -v
 """
+
 import asyncio
 import os
-
-# Set TESTING=1 before any app imports so the rate limiter uses unique per-request
-# keys (avoiding rate limit accumulation across test runs).
-os.environ["TESTING"] = "1"
 
 import pytest  # noqa: E402
 import pytest_asyncio  # noqa: E402
 from httpx import ASGITransport, AsyncClient  # noqa: E402
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine  # noqa: E402
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)  # noqa: E402
 
 from app.database import get_db  # noqa: E402
 from app.main import app  # noqa: E402
-from app.models import Base  # noqa: E402 — imports all models, registering them with metadata
+from app.models import (
+    Base,
+)  # noqa: E402 — imports all models, registering them with metadata
+
+# Set TESTING=1 before any app imports so the rate limiter uses unique per-request
+# keys (avoiding rate limit accumulation across test runs).
+os.environ["TESTING"] = "1"
 
 TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
@@ -47,6 +54,7 @@ def create_tables():
     event loop — completely separate from the per-test loops that
     pytest-asyncio 0.23 creates for each async test function.
     """
+
     async def _setup():
         engine = create_async_engine(TEST_DATABASE_URL)
         async with engine.begin() as conn:
@@ -73,9 +81,12 @@ async def client():
     so each test starts with a clean database.
     """
     engine = create_async_engine(TEST_DATABASE_URL)
-    Session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False, autoflush=True)
+    Session = async_sessionmaker(
+        engine, class_=AsyncSession, expire_on_commit=False, autoflush=True
+    )
 
     async with Session() as session:
+
         async def override_get_db():
             try:
                 yield session

@@ -41,7 +41,9 @@ class FocusArea(str, enum.Enum):
 class Drill(Base):
     __tablename__ = "drills"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=lambda: str(uuid.uuid4())
+    )
     title: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     duration_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -69,16 +71,24 @@ class Drill(Base):
     )
 
     created_by: Mapped["User"] = relationship("User", back_populates="drills")  # noqa: F821
-    likes: Mapped[list["Like"]] = relationship("Like", back_populates="drill", lazy="select")  # noqa: F821
+    likes: Mapped[list["Like"]] = relationship(
+        "Like", back_populates="drill", lazy="select"
+    )  # noqa: F821
 
 
 class Like(Base):
     __tablename__ = "likes"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=lambda: str(uuid.uuid4())
+    )
     user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"), nullable=False)
-    drill_id: Mapped[str | None] = mapped_column(String, ForeignKey("drills.id"), nullable=True)
-    session_id: Mapped[str | None] = mapped_column(String, ForeignKey("sessions.id"), nullable=True)
+    drill_id: Mapped[str | None] = mapped_column(
+        String, ForeignKey("drills.id"), nullable=True
+    )
+    session_id: Mapped[str | None] = mapped_column(
+        String, ForeignKey("sessions.id"), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     user: Mapped["User"] = relationship("User", back_populates="likes")  # noqa: F821
