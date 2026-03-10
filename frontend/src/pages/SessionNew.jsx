@@ -1,62 +1,65 @@
-import { useNavigate } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { useState } from 'react'
-import { X } from 'lucide-react'
-import { useCreateSession } from '../hooks/useSessions.js'
-import { AGE_RANGES, FOCUS_AREAS, SKILL_LEVELS } from '../lib/constants.js'
-import Input from '../components/ui/Input.jsx'
-import Button from '../components/ui/Button.jsx'
-import Card from '../components/ui/Card.jsx'
+import { useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useState } from "react";
+import { X } from "lucide-react";
+import { useCreateSession } from "../hooks/useSessions.js";
+import { AGE_RANGES, FOCUS_AREAS, SKILL_LEVELS } from "../lib/constants.js";
+import Input from "../components/ui/Input.jsx";
+import Button from "../components/ui/Button.jsx";
+import Card from "../components/ui/Card.jsx";
 
 const schema = z.object({
-  title: z.string().min(1, 'Title is required').max(200),
+  title: z.string().min(1, "Title is required").max(200),
   description: z.string().optional(),
   age_range: z.string().optional(),
   skill_level: z.string().optional(),
-  team_size: z.coerce.number().int().positive().optional().or(z.literal('')),
+  team_size: z.coerce.number().int().positive().optional().or(z.literal("")),
   is_public: z.boolean().default(false),
-})
+});
 
-const labelClass = 'block text-sm font-medium mb-1.5'
+const labelClass = "block text-sm font-medium mb-1.5";
 const selectClass =
-  'w-full border text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 transition-colors'
+  "w-full border text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 transition-colors";
 const textareaClass =
-  'w-full border text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 transition-colors resize-none'
+  "w-full border text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 transition-colors resize-none";
 
 export default function SessionNew() {
-  const navigate = useNavigate()
-  const createSession = useCreateSession()
-  const [selectedFocusAreas, setSelectedFocusAreas] = useState([])
-  const [tags, setTags] = useState([])
-  const [tagInput, setTagInput] = useState('')
+  const navigate = useNavigate();
+  const createSession = useCreateSession();
+  const [selectedFocusAreas, setSelectedFocusAreas] = useState([]);
+  const [tags, setTags] = useState([]);
+  const [tagInput, setTagInput] = useState("");
 
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm({ resolver: zodResolver(schema), defaultValues: { is_public: false } })
+  } = useForm({
+    resolver: zodResolver(schema),
+    defaultValues: { is_public: false },
+  });
 
   function toggleFocusArea(value) {
     setSelectedFocusAreas((prev) =>
-      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
-    )
+      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value],
+    );
   }
 
   function addTag(e) {
-    if (e.key === 'Enter' || e.key === ',') {
-      e.preventDefault()
-      const tag = tagInput.trim().toLowerCase().replace(/\s+/g, '-')
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      const tag = tagInput.trim().toLowerCase().replace(/\s+/g, "-");
       if (tag && !tags.includes(tag)) {
-        setTags((prev) => [...prev, tag])
+        setTags((prev) => [...prev, tag]);
       }
-      setTagInput('')
+      setTagInput("");
     }
   }
 
   function removeTag(tag) {
-    setTags((prev) => prev.filter((t) => t !== tag))
+    setTags((prev) => prev.filter((t) => t !== tag));
   }
 
   async function onSubmit(values) {
@@ -69,10 +72,10 @@ export default function SessionNew() {
       team_size: values.team_size ? Number(values.team_size) : null,
       is_public: values.is_public,
       tags,
-    }
+    };
 
-    const session = await createSession.mutateAsync(payload)
-    navigate(`/sessions/${session.id}/edit`)
+    const session = await createSession.mutateAsync(payload);
+    navigate(`/sessions/${session.id}/edit`);
   }
 
   return (
@@ -80,19 +83,26 @@ export default function SessionNew() {
       <div className="mb-8">
         <h1
           className="text-4xl mb-2 tracking-wide"
-          style={{ fontFamily: '"Bebas Neue", cursive', color: 'var(--color-text)' }}
+          style={{
+            fontFamily: '"Bebas Neue", cursive',
+            color: "var(--color-text)",
+          }}
         >
           Create New Session
         </h1>
-        <p style={{ color: 'var(--color-text-muted)' }}>
-          Fill in the session details. After creating, you can add drills to your session.
+        <p style={{ color: "var(--color-text-muted)" }}>
+          Fill in the session details. After creating, you can add drills to
+          your session.
         </p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Basic info */}
         <Card>
-          <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--color-text)' }}>
+          <h2
+            className="text-lg font-semibold mb-4"
+            style={{ color: "var(--color-text)" }}
+          >
             Basic Information
           </h2>
           <div className="space-y-4">
@@ -100,26 +110,26 @@ export default function SessionNew() {
               label="Title *"
               placeholder="e.g. Tuesday Evening Training"
               error={errors.title?.message}
-              {...register('title')}
+              {...register("title")}
             />
 
             <div>
               <label
                 className={labelClass}
-                style={{ color: 'var(--color-text)' }}
+                style={{ color: "var(--color-text)" }}
               >
                 Description
               </label>
               <textarea
                 className={textareaClass}
                 style={{
-                  backgroundColor: 'var(--color-surface-2)',
-                  borderColor: 'var(--color-border)',
-                  color: 'var(--color-text)',
+                  backgroundColor: "var(--color-surface-2)",
+                  borderColor: "var(--color-border)",
+                  color: "var(--color-text)",
                 }}
                 rows={4}
                 placeholder="What is the main focus of this training session?"
-                {...register('description')}
+                {...register("description")}
               />
             </div>
 
@@ -128,29 +138,35 @@ export default function SessionNew() {
               type="number"
               placeholder="12"
               error={errors.team_size?.message}
-              {...register('team_size')}
+              {...register("team_size")}
             />
           </div>
         </Card>
 
         {/* Classification */}
         <Card>
-          <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--color-text)' }}>
+          <h2
+            className="text-lg font-semibold mb-4"
+            style={{ color: "var(--color-text)" }}
+          >
             Classification
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
-              <label className={labelClass} style={{ color: 'var(--color-text)' }}>
+              <label
+                className={labelClass}
+                style={{ color: "var(--color-text)" }}
+              >
                 Age Range
               </label>
               <select
                 className={selectClass}
                 style={{
-                  backgroundColor: 'var(--color-surface-2)',
-                  borderColor: 'var(--color-border)',
-                  color: 'var(--color-text)',
+                  backgroundColor: "var(--color-surface-2)",
+                  borderColor: "var(--color-border)",
+                  color: "var(--color-text)",
                 }}
-                {...register('age_range')}
+                {...register("age_range")}
               >
                 <option value="">Select age range</option>
                 {AGE_RANGES.map((a) => (
@@ -162,17 +178,20 @@ export default function SessionNew() {
             </div>
 
             <div>
-              <label className={labelClass} style={{ color: 'var(--color-text)' }}>
+              <label
+                className={labelClass}
+                style={{ color: "var(--color-text)" }}
+              >
                 Skill Level
               </label>
               <select
                 className={selectClass}
                 style={{
-                  backgroundColor: 'var(--color-surface-2)',
-                  borderColor: 'var(--color-border)',
-                  color: 'var(--color-text)',
+                  backgroundColor: "var(--color-surface-2)",
+                  borderColor: "var(--color-border)",
+                  color: "var(--color-text)",
                 }}
-                {...register('skill_level')}
+                {...register("skill_level")}
               >
                 <option value="">Select level</option>
                 {SKILL_LEVELS.map((s) => (
@@ -186,12 +205,15 @@ export default function SessionNew() {
 
           {/* Focus areas multi-select */}
           <div>
-            <label className={labelClass} style={{ color: 'var(--color-text)' }}>
+            <label
+              className={labelClass}
+              style={{ color: "var(--color-text)" }}
+            >
               Focus Areas
             </label>
             <div className="flex flex-wrap gap-2">
               {FOCUS_AREAS.map((f) => {
-                const selected = selectedFocusAreas.includes(f.value)
+                const selected = selectedFocusAreas.includes(f.value);
                 return (
                   <button
                     key={f.value}
@@ -199,14 +221,20 @@ export default function SessionNew() {
                     onClick={() => toggleFocusArea(f.value)}
                     className="px-3 py-1 rounded-full text-sm border transition-all"
                     style={{
-                      backgroundColor: selected ? '#cc141422' : 'var(--color-surface-2)',
-                      borderColor: selected ? 'var(--color-accent)' : 'var(--color-border)',
-                      color: selected ? 'var(--color-accent)' : 'var(--color-text-muted)',
+                      backgroundColor: selected
+                        ? "#cc141422"
+                        : "var(--color-surface-2)",
+                      borderColor: selected
+                        ? "var(--color-accent)"
+                        : "var(--color-border)",
+                      color: selected
+                        ? "var(--color-accent)"
+                        : "var(--color-text-muted)",
                     }}
                   >
                     {f.label}
                   </button>
-                )
+                );
               })}
             </div>
           </div>
@@ -214,7 +242,10 @@ export default function SessionNew() {
 
         {/* Tags */}
         <Card>
-          <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--color-text)' }}>
+          <h2
+            className="text-lg font-semibold mb-4"
+            style={{ color: "var(--color-text)" }}
+          >
             Tags
           </h2>
           <div className="flex flex-wrap gap-1.5 mb-3">
@@ -223,13 +254,17 @@ export default function SessionNew() {
                 key={tag}
                 className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-mono"
                 style={{
-                  backgroundColor: '#4a9eff22',
-                  color: '#4a9eff',
-                  border: '1px solid #4a9eff44',
+                  backgroundColor: "#4a9eff22",
+                  color: "#4a9eff",
+                  border: "1px solid #4a9eff44",
                 }}
               >
                 {tag}
-                <button type="button" onClick={() => removeTag(tag)} aria-label={`Remove tag ${tag}`}>
+                <button
+                  type="button"
+                  onClick={() => removeTag(tag)}
+                  aria-label={`Remove tag ${tag}`}
+                >
                   <X className="w-3 h-3" />
                 </button>
               </span>
@@ -237,19 +272,22 @@ export default function SessionNew() {
           </div>
           <input
             type="text"
-            className={textareaClass.replace('resize-none', '')}
+            className={textareaClass.replace("resize-none", "")}
             style={{
-              backgroundColor: 'var(--color-surface-2)',
-              borderColor: 'var(--color-border)',
-              color: 'var(--color-text)',
-              height: 'auto',
+              backgroundColor: "var(--color-surface-2)",
+              borderColor: "var(--color-border)",
+              color: "var(--color-text)",
+              height: "auto",
             }}
             placeholder="Type a tag and press Enter (e.g. transition)"
             value={tagInput}
             onChange={(e) => setTagInput(e.target.value)}
             onKeyDown={addTag}
           />
-          <p className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>
+          <p
+            className="text-xs mt-1"
+            style={{ color: "var(--color-text-muted)" }}
+          >
             Press Enter or comma to add a tag
           </p>
         </Card>
@@ -261,12 +299,15 @@ export default function SessionNew() {
               <input
                 type="checkbox"
                 className="sr-only peer"
-                {...register('is_public')}
+                {...register("is_public")}
               />
               <div className="w-11 h-6 rounded-full transition-colors peer-checked:bg-accent bg-surface2 border border-border-color" />
               <div className="absolute left-1 top-1 w-4 h-4 rounded-full bg-text-muted transition-transform peer-checked:translate-x-5 peer-checked:bg-bg" />
             </div>
-            <span className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+            <span
+              className="text-sm font-medium"
+              style={{ color: "var(--color-text)" }}
+            >
               Publish publicly
             </span>
           </label>
@@ -286,5 +327,5 @@ export default function SessionNew() {
         </div>
       </form>
     </div>
-  )
+  );
 }

@@ -23,6 +23,26 @@ class UserOut(BaseModel):
     coaching_level: str | None = None
     avatar_url: str | None = None
     created_at: datetime
+    follower_count: int = 0
+    following_count: int = 0
+    is_following: bool = False
+
+    model_config = {"from_attributes": True}
+
+
+class PublicUserOut(BaseModel):
+    """UserOut for public profile endpoints — omits email."""
+
+    id: str
+    name: str
+    club: str | None = None
+    country: str | None = None
+    coaching_level: str | None = None
+    avatar_url: str | None = None
+    created_at: datetime
+    follower_count: int = 0
+    following_count: int = 0
+    is_following: bool = False
 
     model_config = {"from_attributes": True}
 

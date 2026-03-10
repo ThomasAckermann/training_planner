@@ -12,7 +12,9 @@ from app.models.drill import AgeRange, SkillLevel
 class Session(Base):
     __tablename__ = "sessions"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=lambda: str(uuid.uuid4())
+    )
     title: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     age_range: Mapped[AgeRange | None] = mapped_column(
@@ -39,17 +41,28 @@ class Session(Base):
         cascade="all, delete-orphan",
     )
     likes: Mapped[list["Like"]] = relationship("Like", back_populates="session")  # noqa: F821
+    favourites: Mapped[list["Favourite"]] = relationship(  # noqa: F821
+        "Favourite", back_populates="session"
+    )
 
 
 class DrillSession(Base):
     __tablename__ = "drill_sessions"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    drill_id: Mapped[str] = mapped_column(String, ForeignKey("drills.id"), nullable=False)
-    session_id: Mapped[str] = mapped_column(String, ForeignKey("sessions.id"), nullable=False)
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    drill_id: Mapped[str] = mapped_column(
+        String, ForeignKey("drills.id"), nullable=False
+    )
+    session_id: Mapped[str] = mapped_column(
+        String, ForeignKey("sessions.id"), nullable=False
+    )
     order_index: Mapped[int] = mapped_column(Integer, nullable=False)
     duration_override: Mapped[int | None] = mapped_column(Integer, nullable=True)
     coach_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     drill: Mapped["Drill"] = relationship("Drill")  # noqa: F821
-    session: Mapped["Session"] = relationship("Session", back_populates="drill_sessions")
+    session: Mapped["Session"] = relationship(
+        "Session", back_populates="drill_sessions"
+    )

@@ -1,4 +1,4 @@
-import { create } from 'zustand'
+import { create } from "zustand";
 
 const useAuthStore = create((set) => ({
   user: null,
@@ -6,6 +6,6 @@ const useAuthStore = create((set) => ({
   setUser: (user) => set({ user }),
   clearUser: () => set({ user: null }),
   setLoading: (isLoading) => set({ isLoading }),
-}))
+}));
 
-export default useAuthStore
+export default useAuthStore;

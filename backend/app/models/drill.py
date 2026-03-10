@@ -5,6 +5,7 @@ from datetime import datetime
 from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, JSON, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.sql import text as sa_text
 
 from app.models.base import Base
 
@@ -41,7 +42,9 @@ class FocusArea(str, enum.Enum):
 class Drill(Base):
     __tablename__ = "drills"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=lambda: str(uuid.uuid4())
+    )
     title: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     duration_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -62,6 +65,9 @@ class Drill(Base):
     drawing_thumb_url: Mapped[str | None] = mapped_column(String, nullable=True)
     video_url: Mapped[str | None] = mapped_column(String, nullable=True)
     is_public: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    view_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=sa_text("0"), default=0
+    )
     user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
@@ -69,18 +75,54 @@ class Drill(Base):
     )
 
     created_by: Mapped["User"] = relationship("User", back_populates="drills")  # noqa: F821
-    likes: Mapped[list["Like"]] = relationship("Like", back_populates="drill", lazy="select")  # noqa: F821
+    likes: Mapped[list["Like"]] = relationship(
+        "Like", back_populates="drill", lazy="select"
+    )  # noqa: F821
+    favourites: Mapped[list["Favourite"]] = relationship(
+        "Favourite", back_populates="drill", lazy="select"
+    )  # noqa: F821
+    ratings: Mapped[list["Rating"]] = relationship(  # noqa: F821
+        "Rating", back_populates="drill", lazy="select"
+    )
 
 
 class Like(Base):
     __tablename__ = "likes"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=lambda: str(uuid.uuid4())
+    )
     user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"), nullable=False)
-    drill_id: Mapped[str | None] = mapped_column(String, ForeignKey("drills.id"), nullable=True)
-    session_id: Mapped[str | None] = mapped_column(String, ForeignKey("sessions.id"), nullable=True)
+    drill_id: Mapped[str | None] = mapped_column(
+        String, ForeignKey("drills.id"), nullable=True
+    )
+    session_id: Mapped[str | None] = mapped_column(
+        String, ForeignKey("sessions.id"), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     user: Mapped["User"] = relationship("User", back_populates="likes")  # noqa: F821
     drill: Mapped["Drill | None"] = relationship("Drill", back_populates="likes")  # noqa: F821
     session: Mapped["Session | None"] = relationship("Session", back_populates="likes")  # noqa: F821
+
+
+class Favourite(Base):
+    __tablename__ = "favourites"
+
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"), nullable=False)
+    drill_id: Mapped[str | None] = mapped_column(
+        String, ForeignKey("drills.id"), nullable=True
+    )
+    session_id: Mapped[str | None] = mapped_column(
+        String, ForeignKey("sessions.id"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    user: Mapped["User"] = relationship("User", back_populates="favourites")  # noqa: F821
+    drill: Mapped["Drill | None"] = relationship("Drill", back_populates="favourites")  # noqa: F821
+    session: Mapped["Session | None"] = relationship(  # noqa: F821
+        "Session", back_populates="favourites"
+    )

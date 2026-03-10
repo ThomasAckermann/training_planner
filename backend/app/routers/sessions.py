@@ -14,7 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.database import get_db
 from app.deps import get_current_user, get_current_user_optional
-from app.models.drill import AgeRange, Drill, Like, SkillLevel
+from app.models.drill import AgeRange, Drill, Favourite, Like, SkillLevel
+from app.models.comment import Comment
 from app.models.session import DrillSession, Session
 from app.models.user import User
 from app.schemas.session import (
@@ -27,6 +28,7 @@ from app.schemas.session import (
     UpdateDrillInSession,
     DrillInSession,
 )
+from app.schemas.comment import CommentAuthor, CommentCreate, CommentOut
 
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 
@@ -51,7 +53,11 @@ async def _session_to_out(db: AsyncSession, session: Session) -> SessionOut:
         )
         drill_likes_count = likes_result.scalar_one() or 0
 
-        effective_duration = ds.duration_override if ds.duration_override is not None else (drill.duration_minutes or 0)
+        effective_duration = (
+            ds.duration_override
+            if ds.duration_override is not None
+            else (drill.duration_minutes or 0)
+        )
         total_duration += effective_duration
 
         drills_in_session.append(
@@ -143,7 +149,9 @@ async def list_sessions(
     items = [await _session_to_out(db, s) for s in sessions]
     pages = math.ceil(total / limit) if total > 0 else 1
 
-    return SessionListResponse(items=items, total=total, page=page, limit=limit, pages=pages)
+    return SessionListResponse(
+        items=items, total=total, page=page, limit=limit, pages=pages
+    )
 
 
 @router.get("/mine", response_model=SessionListResponse)
@@ -180,7 +188,9 @@ async def list_my_sessions(
     items = [await _session_to_out(db, s) for s in sessions]
     pages = math.ceil(total / limit) if total > 0 else 1
 
-    return SessionListResponse(items=items, total=total, page=page, limit=limit, pages=pages)
+    return SessionListResponse(
+        items=items, total=total, page=page, limit=limit, pages=pages
+    )
 
 
 @router.get("/{session_id}", response_model=SessionOut)
@@ -193,11 +203,15 @@ async def get_session(
     session = result.scalar_one_or_none()
 
     if not session:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
+        )
 
     if not session.is_public:
         if not current_user or session.user_id != current_user.id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
+            )
 
     return await _session_to_out(db, session)
 
@@ -236,10 +250,14 @@ async def update_session(
     session = result.scalar_one_or_none()
 
     if not session:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
+        )
 
     if session.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
+        )
 
     update_data = body.model_dump(exclude_unset=True)
     for field, value in update_data.items():
@@ -261,10 +279,14 @@ async def delete_session(
     session = result.scalar_one_or_none()
 
     if not session:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
+        )
 
     if session.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
+        )
 
     # Delete associated likes first
     likes_result = await db.execute(select(Like).where(Like.session_id == session_id))
@@ -274,7 +296,11 @@ async def delete_session(
     await db.delete(session)
 
 
-@router.post("/{session_id}/duplicate", response_model=SessionOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{session_id}/duplicate",
+    response_model=SessionOut,
+    status_code=status.HTTP_201_CREATED,
+)
 async def duplicate_session(
     session_id: str,
     db: AsyncSession = Depends(get_db),
@@ -284,10 +310,14 @@ async def duplicate_session(
     original = result.scalar_one_or_none()
 
     if not original:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
+        )
 
     if not original.is_public and original.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
+        )
 
     new_session = Session(
         title=f"[Copy] {original.title}",
@@ -334,7 +364,9 @@ async def toggle_like_session(
     session = result.scalar_one_or_none()
 
     if not session:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
+        )
 
     existing_result = await db.execute(
         select(Like).where(
@@ -364,20 +396,28 @@ async def add_drill_to_session(
     session = result.scalar_one_or_none()
 
     if not session:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
+        )
 
     if session.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
+        )
 
     # Check drill exists
     drill_result = await db.execute(select(Drill).where(Drill.id == body.drill_id))
     drill = drill_result.scalar_one_or_none()
     if not drill:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Drill not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Drill not found"
+        )
 
     # Get max order_index
     max_result = await db.execute(
-        select(func.max(DrillSession.order_index)).where(DrillSession.session_id == session_id)
+        select(func.max(DrillSession.order_index)).where(
+            DrillSession.session_id == session_id
+        )
     )
     max_index = max_result.scalar_one()
     next_index = (max_index + 1) if max_index is not None else 0
@@ -406,10 +446,14 @@ async def reorder_drills(
     session = result.scalar_one_or_none()
 
     if not session:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
+        )
 
     if session.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
+        )
 
     for index, ds_id in enumerate(body.drill_session_ids):
         ds_result = await db.execute(
@@ -439,10 +483,14 @@ async def update_drill_in_session(
     session = result.scalar_one_or_none()
 
     if not session:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
+        )
 
     if session.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
+        )
 
     ds_result = await db.execute(
         select(DrillSession).where(
@@ -453,7 +501,9 @@ async def update_drill_in_session(
     ds = ds_result.scalar_one_or_none()
 
     if not ds:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Drill session not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Drill session not found"
+        )
 
     update_data = body.model_dump(exclude_unset=True)
     for field, value in update_data.items():
@@ -475,10 +525,14 @@ async def remove_drill_from_session(
     session = result.scalar_one_or_none()
 
     if not session:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
+        )
 
     if session.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
+        )
 
     ds_result = await db.execute(
         select(DrillSession).where(
@@ -489,7 +543,9 @@ async def remove_drill_from_session(
     ds = ds_result.scalar_one_or_none()
 
     if not ds:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Drill session not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Drill session not found"
+        )
 
     await db.delete(ds)
     await db.flush()
@@ -508,12 +564,131 @@ async def remove_drill_from_session(
     await db.flush()
     return await _session_to_out(db, session)
 
+
+@router.post("/{session_id}/favourite")
+async def toggle_favourite_session(
+    session_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    result = await db.execute(select(Session).where(Session.id == session_id))
+    session = result.scalar_one_or_none()
+
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
+        )
+
+    existing_result = await db.execute(
+        select(Favourite).where(
+            Favourite.session_id == session_id,
+            Favourite.user_id == current_user.id,
+        )
+    )
+    existing = existing_result.scalar_one_or_none()
+
+    if existing:
+        await db.delete(existing)
+        return {"favourited": False}
+    else:
+        fav = Favourite(user_id=current_user.id, session_id=session_id)
+        db.add(fav)
+        return {"favourited": True}
+
+
+async def _comment_to_out(db: AsyncSession, comment: Comment) -> CommentOut:
+    user_result = await db.execute(select(User).where(User.id == comment.user_id))
+    user = user_result.scalar_one_or_none()
+    author = (
+        CommentAuthor(id=user.id, name=user.name, avatar_url=user.avatar_url)
+        if user
+        else CommentAuthor(id=comment.user_id, name="Unknown")
+    )
+
+    replies_result = await db.execute(
+        select(Comment)
+        .where(Comment.parent_id == comment.id)
+        .order_by(Comment.created_at.asc())
+    )
+    replies = [await _comment_to_out(db, r) for r in replies_result.scalars().all()]
+
+    return CommentOut(
+        id=comment.id,
+        user_id=comment.user_id,
+        drill_id=comment.drill_id,
+        session_id=comment.session_id,
+        parent_id=comment.parent_id,
+        body=comment.body,
+        created_at=comment.created_at,
+        author=author,
+        replies=replies,
+    )
+
+
+@router.get("/{session_id}/comments", response_model=list[CommentOut])
+async def list_session_comments(
+    session_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional),
+) -> list[CommentOut]:
+    result = await db.execute(select(Session).where(Session.id == session_id))
+    session = result.scalar_one_or_none()
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
+        )
+    if not session.is_public:
+        if not current_user or session.user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
+            )
+
+    comments_result = await db.execute(
+        select(Comment)
+        .where(Comment.session_id == session_id, Comment.parent_id.is_(None))
+        .order_by(Comment.created_at.asc())
+    )
+    return [await _comment_to_out(db, c) for c in comments_result.scalars().all()]
+
+
+@router.post(
+    "/{session_id}/comments",
+    response_model=CommentOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_session_comment(
+    session_id: str,
+    body: CommentCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> CommentOut:
+    result = await db.execute(select(Session).where(Session.id == session_id))
+    session = result.scalar_one_or_none()
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
+        )
+
+    comment = Comment(
+        user_id=current_user.id,
+        session_id=session_id,
+        parent_id=body.parent_id,
+        body=body.body,
+    )
+    db.add(comment)
+    await db.flush()
+    await db.refresh(comment)
+    return await _comment_to_out(db, comment)
+
+
 class _SessionPDF(FPDF):
     def footer(self):
         self.set_y(-15)
         self.set_font("Helvetica", "I", 8)
         self.set_text_color(170, 170, 170)
-        self.cell(0, 10, f"Generated with VC Planner  |  Page {self.page_no()}", align="C")
+        self.cell(
+            0, 10, f"Generated with VC Planner  |  Page {self.page_no()}", align="C"
+        )
 
 
 def _build_pdf(session_out, creator, drills_with_images) -> bytes:
@@ -607,7 +782,9 @@ def _build_pdf(session_out, creator, drills_with_images) -> bytes:
             meta_bits.append(str(drill.focus_area))
         if drill.num_players_min or drill.num_players_max:
             if drill.num_players_min and drill.num_players_max:
-                meta_bits.append(f"Players: {drill.num_players_min}-{drill.num_players_max}")
+                meta_bits.append(
+                    f"Players: {drill.num_players_min}-{drill.num_players_max}"
+                )
             elif drill.num_players_min:
                 meta_bits.append(f"Players: {drill.num_players_min}+")
             else:
@@ -667,11 +844,15 @@ async def export_session_pdf(
     session = result.scalar_one_or_none()
 
     if not session:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
+        )
 
     if not session.is_public:
         if not current_user or session.user_id != current_user.id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
+            )
 
     user_result = await db.execute(select(User).where(User.id == session.user_id))
     creator = user_result.scalar_one_or_none()

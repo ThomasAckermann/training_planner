@@ -1,255 +1,267 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ session.title }}</title>
-  <style>
-    @page {
-      size: A4;
-      margin: 18mm 15mm 22mm 15mm;
-      @bottom-center {
-        content: "Generated with VC Planner  ·  Page " counter(page) " of " counter(pages);
-        font-family: 'Helvetica Neue', Arial, sans-serif;
-        font-size: 8pt;
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ session.title }}</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 18mm 15mm 22mm 15mm;
+        @bottom-center {
+          content: "Generated with VC Planner  ·  Page " counter(page) " of "
+            counter(pages);
+          font-family: "Helvetica Neue", Arial, sans-serif;
+          font-size: 8pt;
+          color: #aaaaaa;
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        color: #1a1a2e;
+        font-size: 10.5pt;
+        line-height: 1.5;
+      }
+
+      .header {
+        border-bottom: 3px solid #1a1a2e;
+        padding-bottom: 10px;
+        margin-bottom: 18px;
+      }
+
+      .session-title {
+        font-size: 26pt;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        line-height: 1.1;
+        margin-bottom: 6px;
+        color: #1a1a2e;
+      }
+
+      .meta-line {
+        color: #555555;
+        font-size: 9.5pt;
+        margin-bottom: 8px;
+      }
+
+      .meta-sep {
+        margin: 0 4px;
         color: #aaaaaa;
       }
-    }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+      .badges {
+        margin-top: 4px;
+      }
 
-    body {
-      font-family: 'Helvetica Neue', Arial, sans-serif;
-      color: #1a1a2e;
-      font-size: 10.5pt;
-      line-height: 1.5;
-    }
+      .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 8.5pt;
+        font-weight: 600;
+        margin: 0 3px 3px 0;
+      }
 
-    .header {
-      border-bottom: 3px solid #1a1a2e;
-      padding-bottom: 10px;
-      margin-bottom: 18px;
-    }
+      .badge-skill {
+        background: #ddeeff;
+        color: #1a5fa8;
+      }
+      .badge-age {
+        background: #ddf5dd;
+        color: #2a6a2a;
+      }
+      .badge-focus {
+        background: #fff3cc;
+        color: #886600;
+      }
 
-    .session-title {
-      font-size: 26pt;
-      font-weight: 900;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      line-height: 1.1;
-      margin-bottom: 6px;
-      color: #1a1a2e;
-    }
+      .session-description {
+        font-size: 10pt;
+        color: #444444;
+        font-style: italic;
+        margin-bottom: 14px;
+        padding: 8px 12px;
+        background: #f8f9fa;
+        border-left: 3px solid #c8f135;
+        border-radius: 0 4px 4px 0;
+      }
 
-    .meta-line {
-      color: #555555;
-      font-size: 9.5pt;
-      margin-bottom: 8px;
-    }
+      .section-title {
+        font-size: 9pt;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: #888888;
+        border-bottom: 1px solid #dddddd;
+        padding-bottom: 4px;
+        margin-bottom: 12px;
+      }
 
-    .meta-sep { margin: 0 4px; color: #aaaaaa; }
+      .drill-item {
+        margin-bottom: 14px;
+        page-break-inside: avoid;
+        border-left: 3px solid #c8f135;
+        padding-left: 10px;
+      }
 
-    .badges { margin-top: 4px; }
+      .drill-header {
+        margin-bottom: 3px;
+        overflow: hidden;
+      }
 
-    .badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 10px;
-      font-size: 8.5pt;
-      font-weight: 600;
-      margin: 0 3px 3px 0;
-    }
+      .drill-number {
+        font-size: 9pt;
+        color: #999999;
+        float: left;
+        margin-right: 4px;
+        margin-top: 2px;
+      }
 
-    .badge-skill { background: #ddeeff; color: #1a5fa8; }
-    .badge-age   { background: #ddf5dd; color: #2a6a2a; }
-    .badge-focus { background: #fff3cc; color: #886600; }
+      .drill-title {
+        font-size: 12.5pt;
+        font-weight: 700;
+        color: #1a1a2e;
+        float: left;
+      }
 
-    .session-description {
-      font-size: 10pt;
-      color: #444444;
-      font-style: italic;
-      margin-bottom: 14px;
-      padding: 8px 12px;
-      background: #f8f9fa;
-      border-left: 3px solid #c8f135;
-      border-radius: 0 4px 4px 0;
-    }
+      .drill-duration {
+        font-size: 11pt;
+        font-weight: 700;
+        color: #c8a000;
+        float: right;
+      }
 
-    .section-title {
-      font-size: 9pt;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      color: #888888;
-      border-bottom: 1px solid #dddddd;
-      padding-bottom: 4px;
-      margin-bottom: 12px;
-    }
+      .drill-meta {
+        font-size: 9pt;
+        color: #666666;
+        margin: 3px 0 6px 0;
+        clear: both;
+      }
 
-    .drill-item {
-      margin-bottom: 14px;
-      page-break-inside: avoid;
-      border-left: 3px solid #c8f135;
-      padding-left: 10px;
-    }
+      .drill-thumbnail {
+        max-width: 260px;
+        max-height: 160px;
+        border: 1px solid #dddddd;
+        border-radius: 4px;
+        margin: 6px 0;
+        display: block;
+      }
 
-    .drill-header {
-      margin-bottom: 3px;
-      overflow: hidden;
-    }
+      .drill-description {
+        font-size: 10pt;
+        color: #333333;
+        margin: 5px 0;
+      }
 
-    .drill-number {
-      font-size: 9pt;
-      color: #999999;
-      float: left;
-      margin-right: 4px;
-      margin-top: 2px;
-    }
+      .coach-notes {
+        background: #f4f6f8;
+        border-radius: 4px;
+        padding: 6px 10px;
+        margin-top: 5px;
+        font-size: 9.5pt;
+        color: #555555;
+      }
 
-    .drill-title {
-      font-size: 12.5pt;
-      font-weight: 700;
-      color: #1a1a2e;
-      float: left;
-    }
+      .coach-notes-label {
+        font-weight: 700;
+        color: #333333;
+      }
 
-    .drill-duration {
-      font-size: 11pt;
-      font-weight: 700;
-      color: #c8a000;
-      float: right;
-    }
-
-    .drill-meta {
-      font-size: 9pt;
-      color: #666666;
-      margin: 3px 0 6px 0;
-      clear: both;
-    }
-
-    .drill-thumbnail {
-      max-width: 260px;
-      max-height: 160px;
-      border: 1px solid #dddddd;
-      border-radius: 4px;
-      margin: 6px 0;
-      display: block;
-    }
-
-    .drill-description {
-      font-size: 10pt;
-      color: #333333;
-      margin: 5px 0;
-    }
-
-    .coach-notes {
-      background: #f4f6f8;
-      border-radius: 4px;
-      padding: 6px 10px;
-      margin-top: 5px;
-      font-size: 9.5pt;
-      color: #555555;
-    }
-
-    .coach-notes-label {
-      font-weight: 700;
-      color: #333333;
-    }
-
-    .drill-separator {
-      border: none;
-      border-top: 1px solid #eeeeee;
-      margin: 12px 0 12px -13px;
-    }
-  </style>
-</head>
-<body>
-
-  <div class="header">
-    <h1 class="session-title">{{ session.title }}</h1>
-    <div class="meta-line">
-      {% if creator %}
+      .drill-separator {
+        border: none;
+        border-top: 1px solid #eeeeee;
+        margin: 12px 0 12px -13px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1 class="session-title">{{ session.title }}</h1>
+      <div class="meta-line">
+        {% if creator %}
         <strong>{{ creator.name }}</strong>
-        {% if creator.club %}<span class="meta-sep">·</span>{{ creator.club }}{% endif %}
-      {% endif %}
-      <span class="meta-sep">·</span>{{ export_date }}
-      {% if session.total_duration_minutes > 0 %}
-        <span class="meta-sep">·</span><strong>{{ session.total_duration_minutes }} min total</strong>
-      {% endif %}
-      {% if session.team_size %}
-        <span class="meta-sep">·</span>{{ session.team_size }} players
-      {% endif %}
-    </div>
-    <div class="badges">
-      {% if session.skill_level %}
+        {% if creator.club %}<span class="meta-sep">·</span>{{ creator.club }}{%
+        endif %} {% endif %} <span class="meta-sep">·</span>{{ export_date }} {%
+        if session.total_duration_minutes > 0 %} <span class="meta-sep">·</span
+        ><strong>{{ session.total_duration_minutes }} min total</strong>
+        {% endif %} {% if session.team_size %}
+        <span class="meta-sep">·</span>{{ session.team_size }} players {% endif
+        %}
+      </div>
+      <div class="badges">
+        {% if session.skill_level %}
         <span class="badge badge-skill">{{ session.skill_level }}</span>
-      {% endif %}
-      {% if session.age_range %}
+        {% endif %} {% if session.age_range %}
         <span class="badge badge-age">{{ session.age_range }}</span>
-      {% endif %}
-      {% for fa in (session.focus_areas or []) %}
+        {% endif %} {% for fa in (session.focus_areas or []) %}
         <span class="badge badge-focus">{{ fa }}</span>
-      {% endfor %}
+        {% endfor %}
+      </div>
     </div>
-  </div>
 
-  {% if session.description %}
-  <div class="session-description">{{ session.description }}</div>
-  {% endif %}
+    {% if session.description %}
+    <div class="session-description">{{ session.description }}</div>
+    {% endif %}
 
-  <div class="section-title">
-    Training Program &mdash; {{ drills|length }} drill{% if drills|length != 1 %}s{% endif %}
-  </div>
+    <div class="section-title">
+      Training Program &mdash; {{ drills|length }} drill{% if drills|length != 1
+      %}s{% endif %}
+    </div>
 
-  {% for item in drills %}
-  {% set drill = item.drill %}
-  {% set eff_dur = drill.duration_override if drill.duration_override else drill.duration_minutes %}
+    {% for item in drills %} {% set drill = item.drill %} {% set eff_dur =
+    drill.duration_override if drill.duration_override else
+    drill.duration_minutes %}
 
-  <div class="drill-item">
-    <div class="drill-header">
-      <span class="drill-number">{{ loop.index }}.</span>
-      <span class="drill-title">{{ drill.title }}</span>
-      {% if eff_dur %}
+    <div class="drill-item">
+      <div class="drill-header">
+        <span class="drill-number">{{ loop.index }}.</span>
+        <span class="drill-title">{{ drill.title }}</span>
+        {% if eff_dur %}
         <span class="drill-duration">{{ eff_dur }} min</span>
-      {% endif %}
-    </div>
-
-    <div class="drill-meta">
-      {% if drill.focus_area %}<span class="badge badge-focus">{{ drill.focus_area }}</span>{% endif %}
-      {% if drill.skill_level %}<span class="badge badge-skill">{{ drill.skill_level }}</span>{% endif %}
-      {% if drill.age_range %}<span class="badge badge-age">{{ drill.age_range }}</span>{% endif %}
-      {% if drill.num_players_min or drill.num_players_max %}
-        <span class="meta-sep">·</span>
-        Players:
-        {% if drill.num_players_min and drill.num_players_max %}
-          {{ drill.num_players_min }}&ndash;{{ drill.num_players_max }}
-        {% elif drill.num_players_min %}
-          {{ drill.num_players_min }}+
-        {% else %}
-          up to {{ drill.num_players_max }}
         {% endif %}
+      </div>
+
+      <div class="drill-meta">
+        {% if drill.focus_area %}<span class="badge badge-focus"
+          >{{ drill.focus_area }}</span
+        >{% endif %} {% if drill.skill_level %}<span class="badge badge-skill"
+          >{{ drill.skill_level }}</span
+        >{% endif %} {% if drill.age_range %}<span class="badge badge-age"
+          >{{ drill.age_range }}</span
+        >{% endif %} {% if drill.num_players_min or drill.num_players_max %}
+        <span class="meta-sep">·</span>
+        Players: {% if drill.num_players_min and drill.num_players_max %} {{
+        drill.num_players_min }}&ndash;{{ drill.num_players_max }} {% elif
+        drill.num_players_min %} {{ drill.num_players_min }}+ {% else %} up to
+        {{ drill.num_players_max }} {% endif %} {% endif %}
+      </div>
+
+      {% if item.thumb_b64 %}
+      <img
+        class="drill-thumbnail"
+        src="data:image/png;base64,{{ item.thumb_b64 }}"
+        alt="Drill diagram"
+      />
+      {% endif %} {% if drill.description %}
+      <p class="drill-description">{{ drill.description }}</p>
+      {% endif %} {% if drill.coach_notes %}
+      <div class="coach-notes">
+        <span class="coach-notes-label">Coach notes: </span>{{ drill.coach_notes
+        }}
+      </div>
       {% endif %}
     </div>
 
-    {% if item.thumb_b64 %}
-    <img class="drill-thumbnail" src="data:image/png;base64,{{ item.thumb_b64 }}" alt="Drill diagram" />
-    {% endif %}
-
-    {% if drill.description %}
-    <p class="drill-description">{{ drill.description }}</p>
-    {% endif %}
-
-    {% if drill.coach_notes %}
-    <div class="coach-notes">
-      <span class="coach-notes-label">Coach notes: </span>{{ drill.coach_notes }}
-    </div>
-    {% endif %}
-  </div>
-
-  {% if not loop.last %}
-  <hr class="drill-separator" />
-  {% endif %}
-  {% endfor %}
-
-</body>
+    {% if not loop.last %}
+    <hr class="drill-separator" />
+    {% endif %} {% endfor %}
+  </body>
 </html>

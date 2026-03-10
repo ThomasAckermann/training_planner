@@ -1,35 +1,35 @@
-import { Link } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { Mail, Lock, User } from 'lucide-react'
-import { useAuth } from '../hooks/useAuth.js'
-import Input from '../components/ui/Input.jsx'
-import Button from '../components/ui/Button.jsx'
+import { Link } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Mail, Lock, User } from "lucide-react";
+import { useAuth } from "../hooks/useAuth.js";
+import Input from "../components/ui/Input.jsx";
+import Button from "../components/ui/Button.jsx";
 
 const schema = z
   .object({
-    name: z.string().min(2, 'Name must be at least 2 characters').max(100),
-    email: z.string().email('Enter a valid email address'),
+    name: z.string().min(2, "Name must be at least 2 characters").max(100),
+    email: z.string().email("Enter a valid email address"),
     password: z
       .string()
-      .min(8, 'Password must be at least 8 characters')
+      .min(8, "Password must be at least 8 characters")
       .max(100),
-    confirmPassword: z.string().min(1, 'Please confirm your password'),
+    confirmPassword: z.string().min(1, "Please confirm your password"),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: 'Passwords do not match',
-    path: ['confirmPassword'],
-  })
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
 
 export default function Register() {
-  const { register: registerUser } = useAuth()
+  const { register: registerUser } = useAuth();
 
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm({ resolver: zodResolver(schema) })
+  } = useForm({ resolver: zodResolver(schema) });
 
   async function onSubmit(values) {
     try {
@@ -37,7 +37,7 @@ export default function Register() {
         name: values.name,
         email: values.email,
         password: values.password,
-      })
+      });
     } catch {
       // Error handled in useAuth hook
     }
@@ -50,11 +50,14 @@ export default function Register() {
         <div className="text-center mb-8">
           <h1
             className="text-4xl mb-2 tracking-wide"
-            style={{ fontFamily: '"Bebas Neue", cursive', color: 'var(--color-text)' }}
+            style={{
+              fontFamily: '"Bebas Neue", cursive',
+              color: "var(--color-text)",
+            }}
           >
             Create Account
           </h1>
-          <p style={{ color: 'var(--color-text-muted)' }}>
+          <p style={{ color: "var(--color-text-muted)" }}>
             Join the volleyball coach community
           </p>
         </div>
@@ -63,8 +66,8 @@ export default function Register() {
         <div
           className="rounded-2xl border p-8"
           style={{
-            backgroundColor: 'var(--color-surface)',
-            borderColor: 'var(--color-border)',
+            backgroundColor: "var(--color-surface)",
+            borderColor: "var(--color-border)",
           }}
         >
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
@@ -75,7 +78,7 @@ export default function Register() {
               icon={User}
               error={errors.name?.message}
               autoComplete="name"
-              {...register('name')}
+              {...register("name")}
             />
 
             <Input
@@ -85,7 +88,7 @@ export default function Register() {
               icon={Mail}
               error={errors.email?.message}
               autoComplete="email"
-              {...register('email')}
+              {...register("email")}
             />
 
             <Input
@@ -95,7 +98,7 @@ export default function Register() {
               icon={Lock}
               error={errors.password?.message}
               autoComplete="new-password"
-              {...register('password')}
+              {...register("password")}
             />
 
             <Input
@@ -105,7 +108,7 @@ export default function Register() {
               icon={Lock}
               error={errors.confirmPassword?.message}
               autoComplete="new-password"
-              {...register('confirmPassword')}
+              {...register("confirmPassword")}
             />
 
             <Button
@@ -121,13 +124,16 @@ export default function Register() {
 
           <div
             className="mt-6 pt-6 text-center text-sm border-t"
-            style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-muted)' }}
+            style={{
+              borderColor: "var(--color-border)",
+              color: "var(--color-text-muted)",
+            }}
           >
-            Already have an account?{' '}
+            Already have an account?{" "}
             <Link
               to="/login"
               className="font-medium transition-colors hover:opacity-80"
-              style={{ color: 'var(--color-accent)' }}
+              style={{ color: "var(--color-accent)" }}
             >
               Sign in
             </Link>
@@ -135,5 +141,5 @@ export default function Register() {
         </div>
       </div>
     </div>
-  )
+  );
 }
