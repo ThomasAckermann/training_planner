@@ -25,6 +25,17 @@ class Settings(BaseSettings):
     environment: str = "development"  # "development" | "production" | "test"
 
     @model_validator(mode="after")
+    def fix_database_url(self) -> "Settings":
+        # Railway (and Heroku) inject DATABASE_URL as postgresql:// or postgres://
+        # SQLAlchemy async requires the +asyncpg driver prefix.
+        url = self.database_url
+        if url.startswith("postgres://"):
+            self.database_url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+        elif url.startswith("postgresql://"):
+            self.database_url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return self
+
+    @model_validator(mode="after")
     def check_production_secrets(self) -> "Settings":
         if self.environment == "production":
             if self.jwt_secret == _DEFAULT_JWT_SECRET:
