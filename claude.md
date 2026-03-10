@@ -557,12 +557,29 @@ U12 🟡 · U14 🟠 · U16 🔵 · U18 🟣 · Adults ⚫ · All 🌐
 - [ ] PNG export → POST to backend → saved locally, URL stored on drill
 
 ### Phase 4 — Polish & Go Live
-- [ ] User profiles + public profile pages
-- [ ] Dashboard (my drills, my sessions, liked content)
+- [x] User profiles + public profile pages
+- [x] Dashboard (my drills, my sessions, liked content)
 - [ ] Responsive mobile layout
 - [ ] Loading states, error boundaries, empty states
-- [ ] Deploy to Railway (backend + frontend + managed Postgres)
+- [x] Deploy to Railway — **architecture decided and implemented**
 - [ ] Migrate file storage from local to AWS S3
+
+#### Railway Deployment (implemented)
+**Architecture: single Railway service** — multi-stage Dockerfile at repo root (Node builds frontend → Python copies `dist/` and serves via FastAPI). No reverse proxy needed; same-origin eliminates CORS.
+
+**Files created/modified:**
+- `Dockerfile` (root) — multi-stage build; `RUN rm -f package-lock.json && npm install` required (macOS lock file missing linux-musl rollup binary)
+- `railway.toml` — `dockerfilePath = "Dockerfile"`, healthcheck at `/health`
+- `backend/app/config.py` — added `frontend_dist_dir: str = "./frontend_dist"`
+- `backend/app/main.py` — catch-all SPA route active only when `frontend_dist/` dir exists (no effect locally)
+
+**Railway one-time manual setup:**
+1. Create project → Deploy from GitHub
+2. Add PostgreSQL plugin (auto-injects `DATABASE_URL`)
+3. Add Volume mounted at `/app/uploads`
+4. Set env vars: `JWT_SECRET`, `JWT_REFRESH_SECRET`, `FRONTEND_URL=https://<domain>.railway.app`
+
+**Cost:** Hobby plan $5/month (includes $5 resource credit — small app stays within it)
 
 ### Access Model
 - All public drills and sessions are **readable without login**

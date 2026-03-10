@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Backend tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: volleycoach
+          POSTGRES_PASSWORD: volleycoach
+          POSTGRES_DB: volleycoach
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r backend/requirements.txt
+        working-directory: .
+
+      - name: Create test database
+        run: psql -h localhost -U volleycoach -c "CREATE DATABASE volleycoach_test;"
+        env:
+          PGPASSWORD: volleycoach
+
+      - name: Run tests
+        run: pytest -v
+        working-directory: backend
+        env:
+          TESTING: "1"
+          TEST_DATABASE_URL: postgresql+asyncpg://volleycoach:volleycoach@localhost:5432/volleycoach_test

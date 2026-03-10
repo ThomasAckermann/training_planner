@@ -1,5 +1,3 @@
-from datetime import timedelta
-
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.database import get_db
 from app.deps import get_current_user
+from app.limiter import limiter
 from app.models.user import User
 from app.schemas.user import UserCreate, UserLogin, UserOut, UserUpdate
 from app.security import (
@@ -23,13 +22,16 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 def _set_auth_cookies(response: Response, user_id: str) -> None:
     access_token = create_access_token({"sub": user_id})
     refresh_token = create_refresh_token({"sub": user_id})
+    # Use secure=True in production (HTTPS only). In development, secure=False
+    # allows cookies over plain HTTP.
+    secure = settings.is_production
 
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
         samesite="lax",
-        secure=False,
+        secure=secure,
         max_age=settings.access_token_expire_minutes * 60,
     )
     response.set_cookie(
@@ -37,13 +39,15 @@ def _set_auth_cookies(response: Response, user_id: str) -> None:
         value=refresh_token,
         httponly=True,
         samesite="lax",
-        secure=False,
+        secure=secure,
         max_age=settings.refresh_token_expire_days * 24 * 60 * 60,
     )
 
 
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
+@limiter.limit("3/minute")
 async def register(
+    request: Request,
     body: UserCreate,
     response: Response,
     db: AsyncSession = Depends(get_db),
@@ -70,7 +74,9 @@ async def register(
 
 
 @router.post("/login", response_model=UserOut)
+@limiter.limit("5/minute")
 async def login(
+    request: Request,
     body: UserLogin,
     response: Response,
     db: AsyncSession = Depends(get_db),
@@ -136,7 +142,7 @@ async def refresh(
         value=access_token,
         httponly=True,
         samesite="lax",
-        secure=False,
+        secure=settings.is_production,
         max_age=settings.access_token_expire_minutes * 60,
     )
     return {"message": "token refreshed"}
