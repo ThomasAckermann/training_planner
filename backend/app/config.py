@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -23,6 +25,13 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 7
     environment: str = "development"  # "development" | "production" | "test"
+
+    # Storage — set STORAGE_BACKEND=s3 in production and provide AWS credentials
+    storage_backend: str = "local"  # "local" | "s3"
+    aws_access_key_id: Optional[str] = None
+    aws_secret_access_key: Optional[str] = None
+    aws_s3_bucket: Optional[str] = None
+    aws_region: str = "us-east-1"
 
     @model_validator(mode="after")
     def fix_database_url(self) -> "Settings":

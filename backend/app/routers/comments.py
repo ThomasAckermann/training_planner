@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.limiter import limiter
 from app.deps import get_current_user
 from app.models.comment import Comment
 from app.models.drill import Drill
@@ -13,7 +14,9 @@ router = APIRouter(prefix="/api/comments", tags=["comments"])
 
 
 @router.delete("/{comment_id}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("10/minute")
 async def delete_comment(
+    request: Request,
     comment_id: str,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),

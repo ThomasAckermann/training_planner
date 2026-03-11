@@ -1,41 +1,117 @@
+"""
+Storage service abstraction — swaps between local filesystem (dev) and AWS S3 (prod).
+
+Usage:
+  storage = get_storage()
+  url = await storage.save(content_bytes, "avatars/user123.jpg", "image/jpeg")
+  await storage.delete("avatars/user123.jpg")
+
+Select backend via STORAGE_BACKEND env var: "local" (default) or "s3".
+S3 also requires: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_BUCKET, AWS_REGION.
+"""
+
+import abc
+import asyncio
 import os
-import uuid
-
-import aiofiles
-from fastapi import HTTPException, UploadFile
-
-from app.config import settings
-
-MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
 
 
-async def save_upload(
-    file: UploadFile,
-    subfolder: str = "uploads",
-    max_bytes: int = MAX_UPLOAD_BYTES,
-) -> str:
-    """Save an uploaded file locally, return the URL path.
+class StorageService(abc.ABC):
+    @abc.abstractmethod
+    async def save(
+        self,
+        content: bytes,
+        path: str,
+        content_type: str = "application/octet-stream",
+    ) -> str:
+        """Persist *content* at *path* and return the public URL."""
+        ...
 
-    Raises HTTP 413 if the file exceeds max_bytes.
-    """
-    upload_path = os.path.join(settings.upload_dir, subfolder)
-    os.makedirs(upload_path, exist_ok=True)
+    @abc.abstractmethod
+    async def delete(self, path: str) -> None:
+        """Delete the file at *path* (no-op if it does not exist)."""
+        ...
 
-    ext = ""
-    if file.filename and "." in file.filename:
-        ext = "." + file.filename.rsplit(".", 1)[-1].lower()
 
-    filename = f"{uuid.uuid4()}{ext}"
-    file_path = os.path.join(upload_path, filename)
+class LocalStorage(StorageService):
+    """Saves files to the local upload directory; serves via /static/*."""
 
-    content = await file.read()
-    if len(content) > max_bytes:
-        raise HTTPException(
-            status_code=413,
-            detail=f"File too large. Maximum allowed size is {max_bytes // 1024 // 1024} MB.",
+    def __init__(self, upload_dir: str) -> None:
+        self.upload_dir = upload_dir
+
+    async def save(
+        self,
+        content: bytes,
+        path: str,
+        content_type: str = "application/octet-stream",
+    ) -> str:
+        full_path = os.path.join(self.upload_dir, path)
+        os.makedirs(os.path.dirname(full_path), exist_ok=True)
+        with open(full_path, "wb") as fh:
+            fh.write(content)
+        return f"/static/{path}"
+
+    async def delete(self, path: str) -> None:
+        full_path = os.path.join(self.upload_dir, path)
+        if os.path.exists(full_path):
+            os.remove(full_path)
+
+
+class S3Storage(StorageService):
+    """Uploads files to an AWS S3 bucket; returns a public HTTPS URL."""
+
+    def __init__(
+        self,
+        bucket: str,
+        region: str,
+        access_key: str,
+        secret_key: str,
+    ) -> None:
+        import boto3  # imported lazily so boto3 is optional in dev
+
+        self.bucket = bucket
+        self.region = region
+        self._client = boto3.client(
+            "s3",
+            region_name=region,
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
         )
 
-    async with aiofiles.open(file_path, "wb") as out_file:
-        await out_file.write(content)
+    async def save(
+        self,
+        content: bytes,
+        path: str,
+        content_type: str = "application/octet-stream",
+    ) -> str:
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(
+            None,
+            lambda: self._client.put_object(
+                Bucket=self.bucket,
+                Key=path,
+                Body=content,
+                ContentType=content_type,
+            ),
+        )
+        return f"https://{self.bucket}.s3.{self.region}.amazonaws.com/{path}"
 
-    return f"/static/{subfolder}/{filename}"
+    async def delete(self, path: str) -> None:
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(
+            None,
+            lambda: self._client.delete_object(Bucket=self.bucket, Key=path),
+        )
+
+
+def get_storage() -> StorageService:
+    """Return the configured storage backend."""
+    from app.config import settings  # local import avoids circular deps at module load
+
+    if settings.storage_backend == "s3":
+        return S3Storage(
+            bucket=settings.aws_s3_bucket or "",
+            region=settings.aws_region,
+            access_key=settings.aws_access_key_id or "",
+            secret_key=settings.aws_secret_access_key or "",
+        )
+    return LocalStorage(upload_dir=settings.upload_dir)

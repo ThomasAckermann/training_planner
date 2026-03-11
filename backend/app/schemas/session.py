@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.drill import AgeRange, SkillLevel
 
@@ -42,8 +42,8 @@ class DrillInSession(BaseModel):
 
 
 class SessionCreate(BaseModel):
-    title: str
-    description: str | None = None
+    title: str = Field(..., max_length=200)
+    description: str | None = Field(None, max_length=10_000)
     age_range: AgeRange | None = None
     skill_level: SkillLevel | None = None
     focus_areas: list[str] = []
@@ -53,8 +53,8 @@ class SessionCreate(BaseModel):
 
 
 class SessionUpdate(BaseModel):
-    title: str | None = None
-    description: str | None = None
+    title: str | None = Field(None, max_length=200)
+    description: str | None = Field(None, max_length=10_000)
     age_range: AgeRange | None = None
     skill_level: SkillLevel | None = None
     focus_areas: list[str] | None = None

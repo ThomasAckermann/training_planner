@@ -5,13 +5,14 @@ from datetime import date
 from io import BytesIO
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import Response
 from fpdf import FPDF
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.limiter import limiter
 from app.database import get_db
 from app.deps import get_current_user, get_current_user_optional
 from app.models.drill import AgeRange, Drill, Favourite, Like, SkillLevel
@@ -217,7 +218,9 @@ async def get_session(
 
 
 @router.post("", response_model=SessionOut, status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/minute")
 async def create_session(
+    request: Request,
     body: SessionCreate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -240,7 +243,9 @@ async def create_session(
 
 
 @router.patch("/{session_id}", response_model=SessionOut)
+@limiter.limit("10/minute")
 async def update_session(
+    request: Request,
     session_id: str,
     body: SessionUpdate,
     db: AsyncSession = Depends(get_db),
@@ -270,7 +275,9 @@ async def update_session(
 
 
 @router.delete("/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("10/minute")
 async def delete_session(
+    request: Request,
     session_id: str,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -301,7 +308,9 @@ async def delete_session(
     response_model=SessionOut,
     status_code=status.HTTP_201_CREATED,
 )
+@limiter.limit("10/minute")
 async def duplicate_session(
+    request: Request,
     session_id: str,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -355,7 +364,9 @@ async def duplicate_session(
 
 
 @router.post("/{session_id}/like")
+@limiter.limit("20/minute")
 async def toggle_like_session(
+    request: Request,
     session_id: str,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -386,7 +397,9 @@ async def toggle_like_session(
 
 
 @router.post("/{session_id}/drills", response_model=SessionOut)
+@limiter.limit("20/minute")
 async def add_drill_to_session(
+    request: Request,
     session_id: str,
     body: AddDrillToSession,
     db: AsyncSession = Depends(get_db),
@@ -566,7 +579,9 @@ async def remove_drill_from_session(
 
 
 @router.post("/{session_id}/favourite")
+@limiter.limit("20/minute")
 async def toggle_favourite_session(
+    request: Request,
     session_id: str,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -656,7 +671,9 @@ async def list_session_comments(
     response_model=CommentOut,
     status_code=status.HTTP_201_CREATED,
 )
+@limiter.limit("10/minute")
 async def create_session_comment(
+    request: Request,
     session_id: str,
     body: CommentCreate,
     db: AsyncSession = Depends(get_db),

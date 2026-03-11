@@ -365,11 +365,9 @@ src/
 │   │   ├── SessionDrillList.jsx   # Drag-to-reorder drills in session
 │   │   └── SessionDetail.jsx
 │   ├── drawing/
-│   │   ├── FieldCanvas.jsx        # Main Konva stage
-│   │   ├── IconPalette.jsx        # Sidebar of draggable icons
+│   │   ├── FieldCanvas.jsx        # Main Konva stage (responsive, touch-enabled)
+│   │   ├── IconPalette.jsx        # Desktop sidebar + mobile horizontal strip
 │   │   ├── DraggableIcon.jsx      # Single icon on canvas
-│   │   ├── ArrowTool.jsx          # Arrow drawing tool
-│   │   ├── LayerManager.jsx       # Phase layers panel
 │   │   └── DrawingToolbar.jsx     # Undo, redo, export, color picker
 │   └── common/
 │       ├── TagBadge.jsx
@@ -439,13 +437,13 @@ src/
 
 ### Canvas Behavior
 
-1. **Drag from palette → drop on court**: creates a new icon at drop position
-2. **Click icon**: selects it, shows transform handles
-3. **Drag selected icon**: moves it
+1. **Tap palette icon → tap court**: selects icon type (highlighted), then tap anywhere on court to place. Works on desktop and touch. Desktop also supports classic HTML5 drag-from-palette.
+2. **Click/tap icon**: selects it, shows transform handles
+3. **Drag selected icon**: moves it (Konva native drag, works on touch)
 4. **Scroll on icon**: resizes it
-5. **Right-click icon**: context menu (duplicate, delete, change color, add label)
-6. **Click + drag on empty court**: creates a movement arrow
-7. **Double-click arrow midpoint**: adds a bend point (Bezier curve)
+5. **Right-click icon**: context menu (delete, change color, edit text) — desktop only
+6. **Mobile action bar**: shown below canvas when an item is selected (Delete + Color picker buttons)
+7. **Click/touch + drag on empty court**: creates a movement arrow (mouse: `onMouseDown/Move/Up`; touch: `onTouchStart/Move/End`)
 
 ### Undo/Redo
 
@@ -529,7 +527,9 @@ U12 🟡 · U14 🟠 · U16 🔵 · U18 🟣 · Adults ⚫ · All 🌐
 - Passwords hashed with `bcrypt` directly (do NOT use `passlib` — it is incompatible with `bcrypt>=4.0`)
 - Input validated server-side with Pydantic
 - Ownership checks on every mutating endpoint (user can only edit their own content)
-- Rate limiting on auth endpoints (`slowapi`)
+- Rate limiting on auth endpoints (`slowapi`) and all mutation endpoints (drills, sessions, comments, users)
+- Input length validation on all text fields (`max_length` in Pydantic schemas: title 200, description 10k, comment body 5k)
+- Drawing JSON capped at 500KB server-side
 - CORS restricted to frontend origin
 
 ### File Storage
@@ -578,33 +578,35 @@ U12 🟡 · U14 🟠 · U16 🔵 · U18 🟣 · Adults ⚫ · All 🌐
 - [x] Drill edit page (`/drills/:id/edit`) — pre-filled form, saves via PATCH
 - [x] Routes wired up in App.jsx and Navbar link added
 
-### Phase 2 — Sessions & Discovery
+### Phase 2 — Sessions & Discovery ✅
 
-- [ ] Session CRUD API + pages
-- [ ] Drill picker UI: search/filter existing drills and add them to a session
-- [ ] Drag-to-reorder drills within a session (`@dnd-kit/sortable`)
-- [ ] Per-drill fields inside a session: duration override, coach notes
-- [ ] Auto-calculated total duration from drills
-- [ ] Filter + search system (age range, skill level, focus area, text search)
-- [ ] Like system (auth required)
-- [ ] Local file upload endpoint (avatar, drill thumbnails → `uploads/`)
-- [ ] PDF export of a training session
+- [x] Session CRUD API + pages
+- [x] Drill picker UI: search/filter existing drills and add them to a session
+- [x] Drag-to-reorder drills within a session (`@dnd-kit/sortable`)
+- [x] Per-drill fields inside a session: duration override, coach notes
+- [x] Auto-calculated total duration from drills
+- [x] Filter + search system (age range, skill level, focus area, text search)
+- [x] Like system (auth required)
+- [x] Local file upload endpoint (avatar, drill thumbnails → `uploads/`)
+- [x] PDF export of a training session (FPDF, server-side)
 
-### Phase 3 — Drawing Tool _(required for MVP)_
+### Phase 3 — Drawing Tool ✅
 
-- [ ] Volleyball court canvas (`react-konva`)
-- [ ] Icon palette + drag-to-court (native HTML5 drag or pointer events)
-- [ ] Move / resize / rotate icons on canvas
-- [ ] Arrow drawing tool (straight + curved)
-- [ ] Undo / redo (Zustand history, max 50 snapshots)
-- [ ] PNG export → POST to backend → saved locally, URL stored on drill
+- [x] Volleyball court canvas (`react-konva`)
+- [x] Icon palette + tap-to-place (desktop: HTML5 drag-drop; mobile: tap-to-select + tap-to-place)
+- [x] Move / resize / rotate icons on canvas
+- [x] Arrow drawing tool (mouse + touch events)
+- [x] Undo / redo (Zustand history, max 50 snapshots)
+- [x] PNG export → POST to backend → saved locally, URL stored on drill
+- [x] Responsive canvas (ResizeObserver + Konva `scaleX/scaleY`)
+- [x] Mobile action bar (delete/color below canvas for touch users)
 
-### Phase 4 — Polish & Go Live
+### Phase 4 — Polish & Go Live ✅
 
 - [x] User profiles + public profile pages
 - [x] Dashboard (my drills, my sessions, liked content)
-- [ ] Responsive mobile layout
-- [ ] Loading states, error boundaries, empty states
+- [x] Responsive mobile layout (navbar hamburger, drawing tool, dashboard cards)
+- [x] Loading states, error boundaries, empty states
 - [x] Deploy to Railway — **architecture decided and implemented**
 - [ ] Migrate file storage from local to AWS S3
 
@@ -627,6 +629,31 @@ U12 🟡 · U14 🟠 · U16 🔵 · U18 🟣 · Adults ⚫ · All 🌐
 4. Set env vars: `JWT_SECRET`, `JWT_REFRESH_SECRET`, `FRONTEND_URL=https://<domain>.railway.app`
 
 **Cost:** Hobby plan $5/month (includes $5 resource credit — small app stays within it)
+
+### Phase 5 — Social Features ✅
+
+- [x] SessionTimeline — proportional time bar on SessionDetail
+- [x] SkillCoverageChart — focus area bar chart on SessionDetail
+- [x] Favourites — bookmark drills/sessions privately (`POST /api/drills/:id/favourite`, `POST /api/sessions/:id/favourite`, `GET /api/users/me/favourites`)
+- [x] Comments — threaded comments on drills & sessions with replies; `DELETE /api/comments/:id`; `CommentThread.jsx`
+- [x] Mobile Coaching Mode — `/sessions/:id/coach` — one-drill-at-a-time with countdown timer
+
+### Phase 6 — Discovery & Analytics ✅
+
+- [x] Author links — DrillDetail/SessionDetail show "By [name]" linked to `/profile/:userId`
+- [x] Ratings — 1–5 star rating per drill; `POST /api/drills/:id/rate?score=N`; `StarRating.jsx`; avg shown in DrillCard
+- [x] Analytics — `view_count` on Drill (incremented on GET); `GET /api/drills/analytics`; Dashboard "Analytics" tab
+- [x] Following — `POST /api/users/:id/follow` toggle; follower/following counts on Profile
+- [x] Feed — `GET /api/feed`; shown on Home.jsx when logged in with ≥1 followed coach
+
+### Phase 7 — Mobile Polish, Security & Tests ✅
+
+- [x] Mobile navbar — hamburger menu (`Menu`/`X`), slide-down panel, closes on route change
+- [x] Mobile drawing tool — responsive Konva stage (`ResizeObserver` + `scaleX/scaleY`), tap-to-select from palette, touch arrow drawing, mobile action bar
+- [x] Dashboard responsive — `flex-wrap` on card rows, `overflow-x-auto` on tab bar
+- [x] Session fork UX — "Fork to My Library" button (`GitFork`), redirects to edit page after fork
+- [x] Security — `max_length` on Pydantic schemas, 500KB drawing JSON limit, `@limiter.limit` on all mutation endpoints
+- [x] Backend tests — 6 new test files: `test_comments`, `test_ratings`, `test_favourites`, `test_follows`, `test_feed`, `test_drawing` (~43 additional tests)
 
 ### Access Model
 
