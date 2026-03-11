@@ -26,12 +26,15 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 7
     environment: str = "development"  # "development" | "production" | "test"
 
-    # Storage — set STORAGE_BACKEND=s3 in production and provide AWS credentials
+    # Storage — set STORAGE_BACKEND=s3 in production and provide credentials.
+    # For AWS S3: set AWS_* vars, leave AWS_ENDPOINT_URL unset.
+    # For Railway / other S3-compatible providers: also set AWS_ENDPOINT_URL.
     storage_backend: str = "local"  # "local" | "s3"
     aws_access_key_id: Optional[str] = None
     aws_secret_access_key: Optional[str] = None
     aws_s3_bucket: Optional[str] = None
     aws_region: str = "us-east-1"
+    aws_endpoint_url: Optional[str] = None  # e.g. Railway Object Storage endpoint
 
     @model_validator(mode="after")
     def fix_database_url(self) -> "Settings":

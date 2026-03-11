@@ -13,6 +13,7 @@ S3 also requires: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_BUCKET, AWS_R
 import abc
 import asyncio
 import os
+from typing import Optional
 
 
 class StorageService(abc.ABC):
@@ -57,7 +58,11 @@ class LocalStorage(StorageService):
 
 
 class S3Storage(StorageService):
-    """Uploads files to an AWS S3 bucket; returns a public HTTPS URL."""
+    """Uploads files to an S3-compatible bucket; returns a public HTTPS URL.
+
+    Works with AWS S3 (no endpoint_url) and S3-compatible providers such as
+    Railway Object Storage, Cloudflare R2, MinIO, etc. (pass endpoint_url).
+    """
 
     def __init__(
         self,
@@ -65,16 +70,19 @@ class S3Storage(StorageService):
         region: str,
         access_key: str,
         secret_key: str,
+        endpoint_url: Optional[str] = None,
     ) -> None:
         import boto3  # imported lazily so boto3 is optional in dev
 
         self.bucket = bucket
         self.region = region
+        self._endpoint_url = endpoint_url
         self._client = boto3.client(
             "s3",
             region_name=region,
             aws_access_key_id=access_key,
             aws_secret_access_key=secret_key,
+            **({"endpoint_url": endpoint_url} if endpoint_url else {}),
         )
 
     async def save(
@@ -93,6 +101,8 @@ class S3Storage(StorageService):
                 ContentType=content_type,
             ),
         )
+        if self._endpoint_url:
+            return f"{self._endpoint_url.rstrip('/')}/{self.bucket}/{path}"
         return f"https://{self.bucket}.s3.{self.region}.amazonaws.com/{path}"
 
     async def delete(self, path: str) -> None:
@@ -113,5 +123,6 @@ def get_storage() -> StorageService:
             region=settings.aws_region,
             access_key=settings.aws_access_key_id or "",
             secret_key=settings.aws_secret_access_key or "",
+            endpoint_url=settings.aws_endpoint_url or None,
         )
     return LocalStorage(upload_dir=settings.upload_dir)
