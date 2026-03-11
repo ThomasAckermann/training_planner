@@ -278,3 +278,9 @@ lerna-debug.log
 # System Files
 .DS_Store
 Thumbs.db
+
+# User-uploaded files — never commit; use S3 in production
+backend/uploads/avatars/*
+backend/uploads/thumbnails/*
+!backend/uploads/avatars/.gitkeep
+!backend/uploads/thumbnails/.gitkeep
