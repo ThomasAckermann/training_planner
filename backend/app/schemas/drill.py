@@ -1,14 +1,14 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.models.drill import AgeRange, FocusArea, SkillLevel
 
 
 class DrillCreate(BaseModel):
-    title: str
-    description: str | None = None
+    title: str = Field(..., max_length=200)
+    description: str | None = Field(None, max_length=10_000)
     duration_minutes: int | None = None
     num_players_min: int | None = None
     num_players_max: int | None = None
@@ -17,13 +17,13 @@ class DrillCreate(BaseModel):
     age_range: AgeRange | None = None
     skill_level: SkillLevel | None = None
     focus_area: FocusArea | None = None
-    video_url: str | None = None
+    video_url: str | None = Field(None, max_length=500)
     is_public: bool = False
 
 
 class DrillUpdate(BaseModel):
-    title: str | None = None
-    description: str | None = None
+    title: str | None = Field(None, max_length=200)
+    description: str | None = Field(None, max_length=10_000)
     duration_minutes: int | None = None
     num_players_min: int | None = None
     num_players_max: int | None = None

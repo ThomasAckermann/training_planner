@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 import { Stage, Layer, Rect, Line, Text, Arrow } from "react-konva";
+import { Trash2, Palette } from "lucide-react";
 import { useDrawingStore } from "../../store/drawingStore.js";
 import DraggableIcon from "./DraggableIcon.jsx";
 
@@ -106,6 +107,18 @@ function CourtBackground() {
         fill={NET_COLOR}
         listening={false}
       />
+      {zoneLabels.map(({ label, x, y }) => (
+        <Text
+          key={label}
+          x={x - 6}
+          y={y - 8}
+          text={label}
+          fontSize={14}
+          fill="rgba(255,255,255,0.18)"
+          fontStyle="bold"
+          listening={false}
+        />
+      ))}
     </>
   );
 }
@@ -116,7 +129,9 @@ export default function FieldCanvas({ stageRef, initialDrawing }) {
     icons,
     arrows,
     selectedId,
+    selectedPaletteIcon,
     setSelected,
+    setSelectedPaletteIcon,
     addIcon,
     addArrow,
     updateIcon,
@@ -127,6 +142,25 @@ export default function FieldCanvas({ stageRef, initialDrawing }) {
     redo,
     loadDrawing,
   } = useDrawingStore();
+
+  // Responsive stage sizing
+  const containerRef = useRef(null);
+  const [stageSize, setStageSize] = useState({
+    w: STAGE_W,
+    h: STAGE_H,
+    scale: 1,
+  });
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new ResizeObserver(([entry]) => {
+      const w = Math.min(entry.contentRect.width, STAGE_W);
+      const scale = w / STAGE_W;
+      setStageSize({ w, h: Math.round(STAGE_H * scale), scale });
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   // Arrow drawing
   const [arrowPreview, setArrowPreview] = useState(null);
@@ -139,6 +173,9 @@ export default function FieldCanvas({ stageRef, initialDrawing }) {
   // Text editor (floating DOM input)
   const [textEdit, setTextEdit] = useState(null);
   // textEdit shape: { iconId, stageX, stageY, currentText }
+
+  // Color picker for mobile action bar
+  const [showColorPicker, setShowColorPicker] = useState(false);
 
   // Load initial drawing once
   const loadedRef = useRef(false);
@@ -179,7 +216,19 @@ export default function FieldCanvas({ stageRef, initialDrawing }) {
     return () => window.removeEventListener("click", dismiss);
   }, [menu]);
 
-  // ── Drop from palette ──────────────────────────────────────────────────────
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  // Get pointer position in unscaled (760x460) coordinate space
+  function getScaledPos(stage) {
+    const pos = stage.getPointerPosition();
+    if (!pos) return null;
+    return { x: pos.x / stageSize.scale, y: pos.y / stageSize.scale };
+  }
+
+  function isBackgroundTarget(e) {
+    return e.target === e.target.getStage() || e.target.name() === "court-bg";
+  }
+
+  // ── Drop from palette (desktop: HTML5 drag-drop) ──────────────────────────
   function handleDrop(e) {
     e.preventDefault();
     const iconType = e.dataTransfer.getData("iconType");
@@ -188,28 +237,53 @@ export default function FieldCanvas({ stageRef, initialDrawing }) {
     addIcon({
       id: crypto.randomUUID(),
       type: iconType,
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
+      x: (e.clientX - rect.left) / stageSize.scale,
+      y: (e.clientY - rect.top) / stageSize.scale,
       color: null,
       text: iconType === "text" ? "Label" : undefined,
     });
   }
 
-  // ── Arrow drawing (click-drag on empty court) ──────────────────────────────
+  // ── Tap-to-place from palette (works on desktop + touch) ─────────────────
+  function handleStageClick(e) {
+    if (!selectedPaletteIcon) {
+      // Deselect if clicking empty area
+      if (isBackgroundTarget(e)) {
+        setSelected(null);
+        setMenu(null);
+      }
+      return;
+    }
+    if (!isBackgroundTarget(e)) return;
+    const pos = getScaledPos(e.target.getStage());
+    if (!pos) return;
+    addIcon({
+      id: crypto.randomUUID(),
+      type: selectedPaletteIcon,
+      x: pos.x,
+      y: pos.y,
+      color: null,
+      text: selectedPaletteIcon === "text" ? "Label" : undefined,
+    });
+    setSelectedPaletteIcon(null);
+  }
+
+  // ── Arrow drawing (mouse) ──────────────────────────────────────────────────
   function handleStageMouseDown(e) {
-    const isBackground =
-      e.target === e.target.getStage() || e.target.name() === "court-bg";
-    if (!isBackground) return;
+    if (selectedPaletteIcon) return; // tap-to-place mode, skip arrow drawing
+    if (!isBackgroundTarget(e)) return;
     setSelected(null);
     setMenu(null);
-    const pos = e.target.getStage().getPointerPosition();
+    const pos = getScaledPos(e.target.getStage());
+    if (!pos) return;
     isDrawingArrow.current = true;
     setArrowPreview({ x1: pos.x, y1: pos.y, x2: pos.x, y2: pos.y });
   }
 
   function handleStageMouseMove(e) {
     if (!isDrawingArrow.current) return;
-    const pos = e.target.getStage().getPointerPosition();
+    const pos = getScaledPos(e.target.getStage());
+    if (!pos) return;
     setArrowPreview((p) => (p ? { ...p, x2: pos.x, y2: pos.y } : null));
   }
 
@@ -226,6 +300,29 @@ export default function FieldCanvas({ stageRef, initialDrawing }) {
       });
     }
     setArrowPreview(null);
+  }
+
+  // ── Arrow drawing (touch) ──────────────────────────────────────────────────
+  function handleStageTouchStart(e) {
+    if (selectedPaletteIcon) return; // tap-to-place handles this via onClick
+    if (!isBackgroundTarget(e)) return;
+    setSelected(null);
+    setMenu(null);
+    const pos = getScaledPos(e.target.getStage());
+    if (!pos) return;
+    isDrawingArrow.current = true;
+    setArrowPreview({ x1: pos.x, y1: pos.y, x2: pos.x, y2: pos.y });
+  }
+
+  function handleStageTouchMove(e) {
+    if (!isDrawingArrow.current) return;
+    const pos = getScaledPos(e.target.getStage());
+    if (!pos) return;
+    setArrowPreview((p) => (p ? { ...p, x2: pos.x, y2: pos.y } : null));
+  }
+
+  function handleStageTouchEnd() {
+    handleStageMouseUp();
   }
 
   // ── Context menus ──────────────────────────────────────────────────────────
@@ -248,8 +345,8 @@ export default function FieldCanvas({ stageRef, initialDrawing }) {
       if (!icon) return;
       setTextEdit({
         iconId,
-        stageX: icon.x,
-        stageY: icon.y,
+        stageX: icon.x * stageSize.scale,
+        stageY: icon.y * stageSize.scale,
         currentText: icon.text || "Label",
       });
       return;
@@ -277,9 +374,23 @@ export default function FieldCanvas({ stageRef, initialDrawing }) {
     setMenu(null);
   }
 
+  // ── Mobile action bar helpers ──────────────────────────────────────────────
+  function deleteSelected() {
+    if (!selectedId) return;
+    removeIcon(selectedId);
+    removeArrow(selectedId);
+    setShowColorPicker(false);
+  }
+
+  function changeSelectedColor(color) {
+    if (!selectedId) return;
+    updateIcon(selectedId, { color });
+    setShowColorPicker(false);
+  }
+
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div style={{ position: "relative", display: "inline-block" }}>
+    <div ref={containerRef} style={{ width: "100%", position: "relative" }}>
       {/* Text editor overlay */}
       {textEdit && (
         <div
@@ -318,30 +429,46 @@ export default function FieldCanvas({ stageRef, initialDrawing }) {
         </div>
       )}
 
+      {/* Palette-select mode hint */}
+      {selectedPaletteIcon && (
+        <div
+          className="text-xs mb-2 px-2 py-1 rounded-lg"
+          style={{
+            backgroundColor: "rgba(200,241,53,0.15)",
+            color: "var(--color-accent)",
+            border: "1px solid var(--color-accent)",
+          }}
+        >
+          Tap the court to place · tap palette again to cancel
+        </div>
+      )}
+
       {/* Konva stage */}
       <div
         onDrop={handleDrop}
         onDragOver={(e) => e.preventDefault()}
-        style={{ cursor: "crosshair" }}
+        style={{ cursor: selectedPaletteIcon ? "crosshair" : "default" }}
       >
         <Stage
           ref={stageRef}
-          width={STAGE_W}
-          height={STAGE_H}
+          width={stageSize.w}
+          height={stageSize.h}
+          scaleX={stageSize.scale}
+          scaleY={stageSize.scale}
           style={{
             backgroundColor: "#111111",
             borderRadius: 8,
             display: "block",
+            touchAction: "none",
           }}
           onMouseDown={handleStageMouseDown}
           onMouseMove={handleStageMouseMove}
           onMouseUp={handleStageMouseUp}
-          onClick={(e) => {
-            if (e.target === e.target.getStage()) {
-              setSelected(null);
-              setMenu(null);
-            }
-          }}
+          onTouchStart={handleStageTouchStart}
+          onTouchMove={handleStageTouchMove}
+          onTouchEnd={handleStageTouchEnd}
+          onClick={handleStageClick}
+          onTap={handleStageClick}
         >
           {/* Static court background */}
           <Layer name="court-background" listening={false}>
@@ -362,6 +489,10 @@ export default function FieldCanvas({ stageRef, initialDrawing }) {
                 dash={arrow.dashed ? [8, 5] : undefined}
                 opacity={selectedId === arrow.id ? 1 : 0.85}
                 onClick={(e) => {
+                  e.cancelBubble = true;
+                  setSelected(arrow.id);
+                }}
+                onTap={(e) => {
                   e.cancelBubble = true;
                   setSelected(arrow.id);
                 }}
@@ -406,7 +537,7 @@ export default function FieldCanvas({ stageRef, initialDrawing }) {
         </Stage>
       </div>
 
-      {/* Context / color-picker menu */}
+      {/* Context / color-picker menu (desktop right-click) */}
       {menu && (
         <div
           onClick={(e) => e.stopPropagation()}
@@ -492,8 +623,8 @@ export default function FieldCanvas({ stageRef, initialDrawing }) {
                   const icon = icons.find((i) => i.id === menu.targetId);
                   setTextEdit({
                     iconId: icon.id,
-                    stageX: icon.x,
-                    stageY: icon.y,
+                    stageX: icon.x * stageSize.scale,
+                    stageY: icon.y * stageSize.scale,
                     currentText: icon.text || "Label",
                   });
                   setMenu(null);
@@ -512,20 +643,104 @@ export default function FieldCanvas({ stageRef, initialDrawing }) {
         </div>
       )}
 
+      {/* Mobile action bar — shown below canvas when an item is selected */}
+      {selectedId && (
+        <div
+          className="flex items-center gap-2 mt-2 p-2 rounded-xl"
+          style={{
+            backgroundColor: "var(--color-surface)",
+            border: "1px solid var(--color-border)",
+          }}
+        >
+          <span
+            className="text-xs flex-1"
+            style={{ color: "var(--color-text-muted)" }}
+          >
+            Item selected
+          </span>
+
+          {/* Color picker — only for icons */}
+          {icons.find((i) => i.id === selectedId) && (
+            <div className="relative">
+              <button
+                onClick={() => setShowColorPicker((v) => !v)}
+                className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-surface2"
+                style={{ color: "var(--color-text-muted)" }}
+              >
+                <Palette className="w-4 h-4" />
+                Color
+              </button>
+              {showColorPicker && (
+                <div
+                  className="absolute bottom-full mb-1 right-0 p-2 rounded-xl"
+                  style={{
+                    backgroundColor: "#1a1a1a",
+                    border: "1px solid #333",
+                    zIndex: 50,
+                  }}
+                >
+                  <div
+                    className="flex flex-wrap gap-1.5"
+                    style={{ maxWidth: 130 }}
+                  >
+                    {COLOR_SWATCHES.map((c) => (
+                      <button
+                        key={c}
+                        onClick={() => changeSelectedColor(c)}
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: "50%",
+                          backgroundColor: c,
+                          border: "2px solid rgba(255,255,255,0.2)",
+                          cursor: "pointer",
+                        }}
+                      />
+                    ))}
+                    <input
+                      type="color"
+                      style={{
+                        width: 26,
+                        height: 26,
+                        padding: 0,
+                        border: "none",
+                        borderRadius: "50%",
+                        cursor: "pointer",
+                        background: "none",
+                      }}
+                      onChange={(e) => changeSelectedColor(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <button
+            onClick={deleteSelected}
+            className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-surface2"
+            style={{ color: "var(--color-danger)" }}
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete
+          </button>
+        </div>
+      )}
+
       {/* Usage hint */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: 6,
-          right: 10,
-          fontSize: 10,
-          color: "rgba(255,255,255,0.22)",
-          pointerEvents: "none",
-        }}
-      >
-        Drag icons from palette · Click &amp; drag court to draw arrows ·
-        Right-click to edit/delete
-      </div>
+      {!selectedId && !selectedPaletteIcon && (
+        <div
+          style={{
+            marginTop: 4,
+            fontSize: 10,
+            color: "rgba(255,255,255,0.22)",
+            textAlign: "right",
+          }}
+        >
+          Tap palette icon then tap court to place · Drag to draw arrows ·
+          Right-click to edit
+        </div>
+      )}
     </div>
   );
 }

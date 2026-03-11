@@ -15,6 +15,11 @@ export const useDrawingStore = create((set, get) => ({
   past: [],
   future: [],
   selectedId: null,
+  selectedPaletteIcon: null,
+
+  setSelectedPaletteIcon(type) {
+    set({ selectedPaletteIcon: type });
+  },
 
   _saveHistory() {
     const { icons, arrows, past } = get();
@@ -114,7 +119,14 @@ export const useDrawingStore = create((set, get) => ({
   },
 
   reset() {
-    set({ icons: [], arrows: [], past: [], future: [], selectedId: null });
+    set({
+      icons: [],
+      arrows: [],
+      past: [],
+      future: [],
+      selectedId: null,
+      selectedPaletteIcon: null,
+    });
   },
 
   getDrawingJson() {

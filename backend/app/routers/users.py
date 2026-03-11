@@ -1,13 +1,14 @@
-import os
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
+from app.limiter import limiter
+from app.storage import get_storage
 from app.database import get_db
 from app.deps import get_current_user, get_current_user_optional
+
 from app.models.drill import Drill, Favourite
 from app.models.follow import Follow
 from app.models.session import Session
@@ -88,7 +89,9 @@ async def get_user_profile(
 
 
 @router.post("/me/avatar", response_model=UserOut)
+@limiter.limit("5/minute")
 async def upload_avatar(
+    request: Request,
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -117,13 +120,13 @@ async def upload_avatar(
     if file.filename and "." in file.filename:
         ext = file.filename.rsplit(".", 1)[-1].lower()
 
-    avatar_dir = os.path.join(settings.upload_dir, "avatars")
-    os.makedirs(avatar_dir, exist_ok=True)
-    avatar_path = os.path.join(avatar_dir, f"{current_user.id}.{ext}")
-    with open(avatar_path, "wb") as f:
-        f.write(content)
-
-    current_user.avatar_url = f"/static/avatars/{current_user.id}.{ext}"
+    storage = get_storage()
+    url = await storage.save(
+        content,
+        f"avatars/{current_user.id}.{ext}",
+        content_type=file.content_type or "image/jpeg",
+    )
+    current_user.avatar_url = url
     db.add(current_user)
     await db.flush()
     await db.refresh(current_user)
@@ -186,7 +189,9 @@ async def get_my_favourites(
 
 
 @router.post("/{user_id}/follow")
+@limiter.limit("20/minute")
 async def toggle_follow(
+    request: Request,
     user_id: str,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),

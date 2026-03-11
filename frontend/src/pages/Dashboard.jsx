@@ -159,11 +159,12 @@ export default function Dashboard() {
 
       {/* Tab bar */}
       <div
-        className="flex gap-1 mb-8 p-1 rounded-xl border"
+        className="flex gap-1 mb-8 p-1 rounded-xl border overflow-x-auto"
         style={{
           backgroundColor: "var(--color-surface)",
           borderColor: "var(--color-border)",
           width: "fit-content",
+          maxWidth: "100%",
         }}
       >
         {[
@@ -255,7 +256,7 @@ export default function Dashboard() {
             <div className="space-y-3">
               {sessions.map((session) => (
                 <Card key={session.id} hoverable className="cursor-pointer">
-                  <div className="flex items-center gap-4">
+                  <div className="flex flex-wrap items-center gap-3">
                     {/* Visibility indicator */}
                     <div
                       className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center"
@@ -690,7 +691,7 @@ export default function Dashboard() {
                     ?.label ?? drill.focus_area;
                 return (
                   <Card key={drill.id} hoverable className="cursor-pointer">
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-wrap items-center gap-3">
                       <div
                         className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center"
                         style={{

@@ -1,6 +1,5 @@
 import json
 import math
-import os
 from typing import Optional
 
 from fastapi import (
@@ -10,13 +9,15 @@ from fastapi import (
     Form,
     HTTPException,
     Query,
+    Request,
     UploadFile,
     status,
 )
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
+from app.storage import get_storage
+from app.limiter import limiter
 from app.database import get_db
 from app.deps import get_current_user, get_current_user_optional
 from app.models.drill import AgeRange, Drill, FocusArea, Favourite, Like, SkillLevel
@@ -246,7 +247,9 @@ async def get_drill(
 
 
 @router.post("", response_model=DrillOut, status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/minute")
 async def create_drill(
+    request: Request,
     body: DrillCreate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -273,7 +276,9 @@ async def create_drill(
 
 
 @router.patch("/{drill_id}", response_model=DrillOut)
+@limiter.limit("10/minute")
 async def update_drill(
+    request: Request,
     drill_id: str,
     body: DrillUpdate,
     db: AsyncSession = Depends(get_db),
@@ -304,7 +309,9 @@ async def update_drill(
 
 
 @router.delete("/{drill_id}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("10/minute")
 async def delete_drill(
+    request: Request,
     drill_id: str,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -332,7 +339,9 @@ async def delete_drill(
 
 
 @router.post("/{drill_id}/like")
+@limiter.limit("20/minute")
 async def toggle_like(
+    request: Request,
     drill_id: str,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -363,13 +372,21 @@ async def toggle_like(
 
 
 @router.post("/{drill_id}/drawing", response_model=DrillOut)
+@limiter.limit("10/minute")
 async def save_drawing(
+    request: Request,
     drill_id: str,
     drawing_json: str = Form(...),
     thumbnail: Optional[UploadFile] = File(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> DrillOut:
+    if len(drawing_json) > 500_000:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Drawing data is too large (max 500KB)",
+        )
+
     result = await db.execute(select(Drill).where(Drill.id == drill_id))
     drill = result.scalar_one_or_none()
 
@@ -392,13 +409,11 @@ async def save_drawing(
         )
 
     if thumbnail:
-        thumb_dir = os.path.join(settings.upload_dir, "thumbnails")
-        os.makedirs(thumb_dir, exist_ok=True)
-        thumb_path = os.path.join(thumb_dir, f"{drill_id}.png")
-        content = await thumbnail.read()
-        with open(thumb_path, "wb") as f:
-            f.write(content)
-        drill.drawing_thumb_url = f"/static/thumbnails/{drill_id}.png"
+        storage = get_storage()
+        thumb_content = await thumbnail.read()
+        drill.drawing_thumb_url = await storage.save(
+            thumb_content, f"thumbnails/{drill_id}.png", content_type="image/png"
+        )
 
     db.add(drill)
     await db.flush()
@@ -407,7 +422,9 @@ async def save_drawing(
 
 
 @router.post("/{drill_id}/favourite")
+@limiter.limit("20/minute")
 async def toggle_favourite_drill(
+    request: Request,
     drill_id: str,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -438,7 +455,9 @@ async def toggle_favourite_drill(
 
 
 @router.post("/{drill_id}/rate")
+@limiter.limit("10/minute")
 async def rate_drill(
+    request: Request,
     drill_id: str,
     score: int,
     db: AsyncSession = Depends(get_db),
@@ -528,7 +547,9 @@ async def list_drill_comments(
     response_model=CommentOut,
     status_code=status.HTTP_201_CREATED,
 )
+@limiter.limit("10/minute")
 async def create_drill_comment(
+    request: Request,
     drill_id: str,
     body: CommentCreate,
     db: AsyncSession = Depends(get_db),

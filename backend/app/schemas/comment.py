@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class CommentAuthor(BaseModel):
@@ -12,7 +12,7 @@ class CommentAuthor(BaseModel):
 
 
 class CommentCreate(BaseModel):
-    body: str
+    body: str = Field(..., min_length=1, max_length=5_000)
     parent_id: str | None = None
 
 
