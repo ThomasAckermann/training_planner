@@ -1,6 +1,7 @@
+import { useDrawingStore } from "../../store/drawingStore.js";
 import { ICON_CONFIGS, PALETTE_CATEGORIES } from "./icons.js";
 
-function PaletteIcon({ type, config }) {
+function PaletteIcon({ type, config, isSelected, onSelect }) {
   function handleDragStart(e) {
     e.dataTransfer.setData("iconType", type);
     e.dataTransfer.effectAllowed = "copy";
@@ -12,17 +13,23 @@ function PaletteIcon({ type, config }) {
     <div
       draggable
       onDragStart={handleDragStart}
+      onClick={onSelect}
       title={config.paletteName}
-      className="flex flex-col items-center gap-1 cursor-grab active:cursor-grabbing select-none"
+      className="flex flex-col items-center gap-1 cursor-pointer select-none"
       style={{ minWidth: 48 }}
     >
       <div
-        className="flex items-center justify-center rounded"
+        className="flex items-center justify-center rounded transition-all"
         style={{
           width: 40,
           height: 40,
-          backgroundColor: "var(--color-surface-2)",
-          border: "1px solid var(--color-border)",
+          backgroundColor: isSelected
+            ? "var(--color-accent)"
+            : "var(--color-surface-2)",
+          border: isSelected
+            ? "2px solid var(--color-accent)"
+            : "1px solid var(--color-border)",
+          boxShadow: isSelected ? "0 0 8px var(--color-accent)" : "none",
         }}
       >
         {config.shape === "circle" && (
@@ -116,7 +123,33 @@ function PaletteIcon({ type, config }) {
   );
 }
 
-export default function IconPalette() {
+// Mobile: horizontal scrollable strip of all icons (no category headers)
+function MobilePalette({ selectedType, onSelectType }) {
+  const allIcons = Object.entries(ICON_CONFIGS);
+  return (
+    <div
+      className="flex gap-2 p-2 rounded-xl overflow-x-auto"
+      style={{
+        backgroundColor: "var(--color-surface)",
+        border: "1px solid var(--color-border)",
+        flexShrink: 0,
+      }}
+    >
+      {allIcons.map(([type, config]) => (
+        <PaletteIcon
+          key={type}
+          type={type}
+          config={config}
+          isSelected={selectedType === type}
+          onSelect={() => onSelectType(selectedType === type ? null : type)}
+        />
+      ))}
+    </div>
+  );
+}
+
+// Desktop: vertical sidebar with category headers
+function DesktopPalette({ selectedType, onSelectType }) {
   return (
     <div
       className="flex flex-col gap-3 p-3 rounded-xl overflow-y-auto"
@@ -142,7 +175,15 @@ export default function IconPalette() {
             </div>
             <div className="flex flex-wrap gap-1.5">
               {icons.map(([type, config]) => (
-                <PaletteIcon key={type} type={type} config={config} />
+                <PaletteIcon
+                  key={type}
+                  type={type}
+                  config={config}
+                  isSelected={selectedType === type}
+                  onSelect={() =>
+                    onSelectType(selectedType === type ? null : type)
+                  }
+                />
               ))}
             </div>
           </div>
@@ -161,5 +202,28 @@ export default function IconPalette() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function IconPalette({ isMobile }) {
+  const selectedPaletteIcon = useDrawingStore((s) => s.selectedPaletteIcon);
+  const setSelectedPaletteIcon = useDrawingStore(
+    (s) => s.setSelectedPaletteIcon,
+  );
+
+  if (isMobile) {
+    return (
+      <MobilePalette
+        selectedType={selectedPaletteIcon}
+        onSelectType={setSelectedPaletteIcon}
+      />
+    );
+  }
+
+  return (
+    <DesktopPalette
+      selectedType={selectedPaletteIcon}
+      onSelectType={setSelectedPaletteIcon}
+    />
   );
 }

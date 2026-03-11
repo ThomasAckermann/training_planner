@@ -29,15 +29,7 @@ import Button from "../components/ui/Button.jsx";
 import Card from "../components/ui/Card.jsx";
 import CommentThread from "../components/common/CommentThread.jsx";
 import { FOCUS_AREAS } from "../lib/constants.js";
-
-function getYouTubeEmbedUrl(url) {
-  if (!url) return null;
-  const match = url.match(
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]{11})/,
-  );
-  if (match) return `https://www.youtube.com/embed/${match[1]}`;
-  return null;
-}
+import { getEmbedUrl } from "../lib/video.js";
 
 export default function DrillDetail() {
   const { id } = useParams();
@@ -48,7 +40,7 @@ export default function DrillDetail() {
   const likeDrill = useLikeDrill();
 
   const isOwner = user && drill && user.id === drill.user_id;
-  const embedUrl = getYouTubeEmbedUrl(drill?.video_url);
+  const embedUrl = getEmbedUrl(drill?.video_url);
   const { data: author } = useUserProfile(drill?.user_id);
   const rateDrill = useRateDrill();
   const focusLabel =

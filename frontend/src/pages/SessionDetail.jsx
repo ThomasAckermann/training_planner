@@ -8,7 +8,7 @@ import {
   Layers,
   Users,
   Heart,
-  Copy,
+  GitFork,
   FileDown,
   PlayCircle,
 } from "lucide-react";
@@ -298,18 +298,27 @@ export default function SessionDetail() {
           </Button>
         )}
         {currentUser && !isOwner && (
-          <Button
-            variant="secondary"
-            loading={duplicateSession.isPending}
-            onClick={async () => {
-              await duplicateSession.mutateAsync(id);
-              navigate("/me?tab=sessions");
-            }}
-            className="flex items-center gap-2"
-          >
-            <Copy className="w-4 h-4" />
-            Duplicate Session
-          </Button>
+          <div className="flex flex-col items-start gap-0.5">
+            <Button
+              variant="secondary"
+              loading={duplicateSession.isPending}
+              onClick={async () => {
+                const newSession = await duplicateSession.mutateAsync(id);
+                toast.success("Session forked — customize it here");
+                navigate(`/sessions/${newSession.id}/edit`);
+              }}
+              className="flex items-center gap-2"
+            >
+              <GitFork className="w-4 h-4" />
+              Fork to My Library
+            </Button>
+            <span
+              className="text-xs px-1"
+              style={{ color: "var(--color-text-muted)" }}
+            >
+              Creates a private editable copy
+            </span>
+          </div>
         )}
         {currentUser && (
           <Button

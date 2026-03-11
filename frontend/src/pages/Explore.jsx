@@ -33,7 +33,7 @@ function SkeletonCard() {
 function SessionFilters({ filters, onFiltersChange }) {
   return (
     <div className="flex flex-wrap gap-3 items-end">
-      <div className="flex-1 min-w-48">
+      <div className="flex-1 min-w-0">
         <Input
           placeholder="Search sessions..."
           value={filters.search ?? ""}

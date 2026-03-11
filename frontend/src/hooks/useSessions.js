@@ -199,11 +199,9 @@ export function useDuplicateSession() {
       api.post(`/api/sessions/${sessionId}/duplicate`).then((r) => r.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sessions", "mine"] });
-      toast.success("Session duplicated — find it in My Sessions");
     },
     onError: (error) => {
-      const message =
-        error.response?.data?.detail || "Failed to duplicate session";
+      const message = error.response?.data?.detail || "Failed to fork session";
       toast.error(message);
     },
   });

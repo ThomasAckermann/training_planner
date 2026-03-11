@@ -15,6 +15,7 @@ import {
   FOCUS_AREAS,
   SKILL_LEVELS,
 } from "../lib/constants.js";
+import { getEmbedUrl } from "../lib/video.js";
 import Input from "../components/ui/Input.jsx";
 import Button from "../components/ui/Button.jsx";
 import Card from "../components/ui/Card.jsx";
@@ -80,8 +81,11 @@ export default function DrillEdit() {
     reset,
     handleSubmit,
     register,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm({ resolver: zodResolver(schema) });
+
+  const videoPreviewUrl = getEmbedUrl(watch("video_url"));
 
   useEffect(() => {
     if (activeTab === "drawing") setDrawingMounted(true);
@@ -457,6 +461,17 @@ export default function DrillEdit() {
               error={errors.video_url?.message}
               {...register("video_url")}
             />
+            {videoPreviewUrl && (
+              <div className="mt-3 aspect-video rounded-lg overflow-hidden">
+                <iframe
+                  src={videoPreviewUrl}
+                  title="Video preview"
+                  className="w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            )}
           </Card>
 
           <div className="flex items-center justify-between pt-2">
@@ -524,12 +539,20 @@ export default function DrillEdit() {
                 onSave={handleSaveDrawing}
                 isSaving={saveDrawing.isPending}
               />
-              <div className="flex gap-4 mt-3">
-                <IconPalette />
-                <FieldCanvas
-                  stageRef={stageRef}
-                  initialDrawing={drill.drawing_json}
-                />
+              {/* Mobile: palette above canvas. Desktop: palette beside canvas */}
+              <div className="flex flex-col md:flex-row gap-3 mt-3">
+                <div className="md:hidden">
+                  <IconPalette isMobile={true} />
+                </div>
+                <div className="hidden md:block">
+                  <IconPalette isMobile={false} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <FieldCanvas
+                    stageRef={stageRef}
+                    initialDrawing={drill.drawing_json}
+                  />
+                </div>
               </div>
             </Suspense>
           </ErrorBoundary>
