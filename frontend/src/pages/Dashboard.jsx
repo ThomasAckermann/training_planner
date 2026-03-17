@@ -10,7 +10,12 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-import { useDrillAnalytics } from "../hooks/useDrills.js";
+import {
+  useDrillAnalytics,
+  useMyDrills,
+  useDeleteDrill,
+} from "../hooks/useDrills.js";
+import { useMySessions, useDeleteSession } from "../hooks/useSessions.js";
 import { useMyFavourites } from "../hooks/useFavourites.js";
 import { useMyModules, useDeleteModule } from "../hooks/useModules.js";
 import useAuthStore from "../store/authStore.js";
@@ -46,7 +51,7 @@ const PHASE_COLORS = {
 export default function Dashboard() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const tab = searchParams.get("tab") ?? "modules";
+  const tab = searchParams.get("tab") ?? "drills";
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
   const avatarInputRef = useRef(null);
@@ -76,8 +81,32 @@ export default function Dashboard() {
   const [analyticsSortKey, setAnalyticsSortKey] = useState("view_count");
   const [analyticsSortAsc, setAnalyticsSortAsc] = useState(false);
 
+  const { data: myDrills, isLoading: drillsLoading } = useMyDrills();
+  const deleteDrill = useDeleteDrill();
+  const { data: mySessions, isLoading: sessionsLoading } = useMySessions();
+  const deleteSession = useDeleteSession();
   const { data: modules, isLoading: modulesLoading } = useMyModules();
   const deleteModule = useDeleteModule();
+
+  async function handleDeleteDrill(e, id) {
+    e.stopPropagation();
+    if (!confirm("Delete this drill? This action cannot be undone.")) return;
+    try {
+      await deleteDrill.mutateAsync(id);
+    } catch {
+      // error toast handled in hook
+    }
+  }
+
+  async function handleDeleteSession(e, id) {
+    e.stopPropagation();
+    if (!confirm("Delete this session? This action cannot be undone.")) return;
+    try {
+      await deleteSession.mutateAsync(id);
+    } catch {
+      // error toast handled in hook
+    }
+  }
 
   async function handleDeleteModule(e, id) {
     e.stopPropagation();
@@ -173,6 +202,8 @@ export default function Dashboard() {
         }}
       >
         {[
+          { key: "drills", label: "My Drills" },
+          { key: "sessions", label: "My Sessions" },
           { key: "modules", label: "My Modules" },
           { key: "favourites", label: "Favourites" },
           { key: "analytics", label: "Analytics" },
@@ -196,6 +227,256 @@ export default function Dashboard() {
           </button>
         ))}
       </div>
+
+      {/* ── My Drills ── */}
+      {tab === "drills" && (
+        <section className="mb-12">
+          <div className="flex items-center justify-between mb-4">
+            <h2
+              className="text-2xl tracking-wide"
+              style={{
+                fontFamily: '"Bebas Neue", cursive',
+                color: "var(--color-text)",
+              }}
+            >
+              My Drills
+            </h2>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => navigate("/drills/new")}
+            >
+              <PlusCircle className="w-4 h-4" />
+              New Drill
+            </Button>
+          </div>
+
+          {drillsLoading ? (
+            <div className="space-y-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-16 rounded-xl animate-pulse"
+                  style={{ backgroundColor: "var(--color-surface)" }}
+                />
+              ))}
+            </div>
+          ) : (myDrills ?? []).length === 0 ? (
+            <div
+              className="text-center py-20 rounded-2xl border"
+              style={{
+                borderColor: "var(--color-border)",
+                backgroundColor: "var(--color-surface)",
+              }}
+            >
+              <div className="text-5xl mb-4">🏐</div>
+              <p
+                className="text-xl font-semibold mb-2"
+                style={{ color: "var(--color-text)" }}
+              >
+                No drills yet
+              </p>
+              <p className="mb-6" style={{ color: "var(--color-text-muted)" }}>
+                Create your first drill to build your library.
+              </p>
+              <Button variant="primary" onClick={() => navigate("/drills/new")}>
+                <PlusCircle className="w-4 h-4" />
+                Create Drill
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {(myDrills ?? []).map((drill) => {
+                const focusLabel =
+                  FOCUS_AREAS.find((f) => f.value === drill.focus_area)
+                    ?.label ?? drill.focus_area;
+                return (
+                  <Card key={drill.id} hoverable>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div
+                        className="flex-1 min-w-0"
+                        onClick={() => navigate(`/drills/${drill.id}`)}
+                        style={{ cursor: "pointer" }}
+                      >
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <span
+                            className="font-semibold truncate"
+                            style={{ color: "var(--color-text)" }}
+                          >
+                            {drill.title}
+                          </span>
+                          {drill.is_public ? (
+                            <Badge>Public</Badge>
+                          ) : (
+                            <Badge>Draft</Badge>
+                          )}
+                        </div>
+                        <div
+                          className="flex items-center gap-3 text-xs"
+                          style={{ color: "var(--color-text-muted)" }}
+                        >
+                          {drill.focus_area && <span>{focusLabel}</span>}
+                          {drill.duration_minutes && (
+                            <span>{drill.duration_minutes} min</span>
+                          )}
+                          {drill.skill_level && (
+                            <span>{drill.skill_level}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/drills/${drill.id}/edit`);
+                          }}
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          loading={deleteDrill.isPending}
+                          onClick={(e) => handleDeleteDrill(e, drill.id)}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* ── My Sessions ── */}
+      {tab === "sessions" && (
+        <section className="mb-12">
+          <div className="flex items-center justify-between mb-4">
+            <h2
+              className="text-2xl tracking-wide"
+              style={{
+                fontFamily: '"Bebas Neue", cursive',
+                color: "var(--color-text)",
+              }}
+            >
+              My Sessions
+            </h2>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => navigate("/sessions/new")}
+            >
+              <PlusCircle className="w-4 h-4" />
+              New Session
+            </Button>
+          </div>
+
+          {sessionsLoading ? (
+            <div className="space-y-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-16 rounded-xl animate-pulse"
+                  style={{ backgroundColor: "var(--color-surface)" }}
+                />
+              ))}
+            </div>
+          ) : (mySessions ?? []).length === 0 ? (
+            <div
+              className="text-center py-20 rounded-2xl border"
+              style={{
+                borderColor: "var(--color-border)",
+                backgroundColor: "var(--color-surface)",
+              }}
+            >
+              <div className="text-5xl mb-4">📋</div>
+              <p
+                className="text-xl font-semibold mb-2"
+                style={{ color: "var(--color-text)" }}
+              >
+                No sessions yet
+              </p>
+              <p className="mb-6" style={{ color: "var(--color-text-muted)" }}>
+                Plan your first training session.
+              </p>
+              <Button
+                variant="primary"
+                onClick={() => navigate("/sessions/new")}
+              >
+                <PlusCircle className="w-4 h-4" />
+                Create Session
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {(mySessions ?? []).map((session) => (
+                <Card key={session.id} hoverable>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div
+                      className="flex-1 min-w-0"
+                      onClick={() => navigate(`/sessions/${session.id}`)}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <span
+                          className="font-semibold truncate"
+                          style={{ color: "var(--color-text)" }}
+                        >
+                          {session.title}
+                        </span>
+                        {session.is_public ? (
+                          <Badge>Public</Badge>
+                        ) : (
+                          <Badge>Draft</Badge>
+                        )}
+                      </div>
+                      <div
+                        className="flex items-center gap-3 text-xs"
+                        style={{ color: "var(--color-text-muted)" }}
+                      >
+                        {session.total_duration_minutes && (
+                          <span>{session.total_duration_minutes} min</span>
+                        )}
+                        {session.skill_level && (
+                          <span>{session.skill_level}</span>
+                        )}
+                        {session.age_range && <span>{session.age_range}</span>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/sessions/${session.id}/edit`);
+                        }}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        loading={deleteSession.isPending}
+                        onClick={(e) => handleDeleteSession(e, session.id)}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* ── My Modules ── */}
       {tab === "modules" && (
