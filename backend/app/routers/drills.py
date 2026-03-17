@@ -22,7 +22,6 @@ from app.database import get_db
 from app.deps import get_current_user, get_current_user_optional
 from app.models.drill import AgeRange, Drill, FocusArea, Favourite, Like, SkillLevel
 from app.models.comment import Comment
-from app.models.rating import Rating
 from app.models.session import DrillSession
 from app.models.user import User
 from app.schemas.drill import (
@@ -44,23 +43,8 @@ async def _get_likes_count(db: AsyncSession, drill_id: str) -> int:
     return result.scalar_one() or 0
 
 
-async def _get_rating_stats(
-    db: AsyncSession, drill_id: str
-) -> tuple[float | None, int]:
-    result = await db.execute(
-        select(func.avg(Rating.score), func.count(Rating.id)).where(
-            Rating.drill_id == drill_id
-        )
-    )
-    row = result.one()
-    avg = float(round(row[0], 2)) if row[0] is not None else None
-    count = row[1] or 0
-    return avg, count
-
-
 async def _drill_to_out(db: AsyncSession, drill: Drill) -> DrillOut:
     likes_count = await _get_likes_count(db, drill.id)
-    avg_rating, rating_count = await _get_rating_stats(db, drill.id)
     data = {
         "id": drill.id,
         "title": drill.title,
@@ -81,8 +65,6 @@ async def _drill_to_out(db: AsyncSession, drill: Drill) -> DrillOut:
         "created_at": drill.created_at,
         "updated_at": drill.updated_at,
         "likes_count": likes_count,
-        "avg_rating": avg_rating,
-        "rating_count": rating_count,
         "view_count": drill.view_count,
     }
     return DrillOut(**data)
@@ -200,7 +182,6 @@ async def get_drill_analytics(
     analytics = []
     for drill in drills:
         likes_count = await _get_likes_count(db, drill.id)
-        avg_rating, rating_count = await _get_rating_stats(db, drill.id)
         session_count_result = await db.execute(
             select(func.count(DrillSession.id)).where(DrillSession.drill_id == drill.id)
         )
@@ -211,8 +192,6 @@ async def get_drill_analytics(
                 title=drill.title,
                 view_count=drill.view_count,
                 likes_count=likes_count,
-                avg_rating=avg_rating,
-                rating_count=rating_count,
                 session_count=session_count,
             )
         )
@@ -452,46 +431,6 @@ async def toggle_favourite_drill(
         fav = Favourite(user_id=current_user.id, drill_id=drill_id)
         db.add(fav)
         return {"favourited": True}
-
-
-@router.post("/{drill_id}/rate")
-@limiter.limit("10/minute")
-async def rate_drill(
-    request: Request,
-    drill_id: str,
-    score: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> dict:
-    if score < 1 or score > 5:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Score must be between 1 and 5",
-        )
-
-    result = await db.execute(select(Drill).where(Drill.id == drill_id))
-    if not result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Drill not found"
-        )
-
-    existing_result = await db.execute(
-        select(Rating).where(
-            Rating.drill_id == drill_id, Rating.user_id == current_user.id
-        )
-    )
-    existing = existing_result.scalar_one_or_none()
-
-    if existing:
-        existing.score = score
-        db.add(existing)
-    else:
-        db.add(Rating(user_id=current_user.id, drill_id=drill_id, score=score))
-
-    await db.flush()
-
-    avg_rating, rating_count = await _get_rating_stats(db, drill_id)
-    return {"avg_rating": avg_rating, "rating_count": rating_count, "user_score": score}
 
 
 async def _comment_to_out(db: AsyncSession, comment: Comment) -> CommentOut:

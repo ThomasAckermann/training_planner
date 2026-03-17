@@ -7,7 +7,11 @@ export function useMyFavourites() {
     queryKey: ["favourites", "mine"],
     queryFn: async () => {
       const res = await api.get("/api/users/me/favourites");
-      return res.data;
+      return {
+        drills: res.data.drills ?? [],
+        sessions: res.data.sessions ?? [],
+        modules: res.data.modules ?? [],
+      };
     },
   });
 }

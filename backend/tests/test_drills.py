@@ -148,3 +148,119 @@ async def test_my_drills_returns_own_drills(client):
     r = await client.get("/api/drills/mine")
     assert r.status_code == 200
     assert r.json()["total"] == 2
+
+
+# ---------------------------------------------------------------------------
+# Filtering / search
+# ---------------------------------------------------------------------------
+
+
+async def test_list_drills_filter_by_focus_area(client):
+    await client.post("/api/auth/register", json=USER1)
+    await client.post("/api/drills", json={**DRILL_PAYLOAD, "focus_area": "SERVING"})
+    await client.post(
+        "/api/drills",
+        json={**DRILL_PAYLOAD, "title": "Block Drill", "focus_area": "BLOCK"},
+    )
+
+    r = await client.get("/api/drills?focus_area=SERVING")
+    assert r.status_code == 200
+    for item in r.json()["items"]:
+        assert item["focus_area"] == "SERVING"
+
+
+async def test_list_drills_filter_by_skill_level(client):
+    await client.post("/api/auth/register", json=USER1)
+    await client.post("/api/drills", json={**DRILL_PAYLOAD, "skill_level": "BEGINNER"})
+    await client.post(
+        "/api/drills",
+        json={**DRILL_PAYLOAD, "title": "Elite Drill", "skill_level": "ELITE"},
+    )
+
+    r = await client.get("/api/drills?skill_level=BEGINNER")
+    assert r.status_code == 200
+    for item in r.json()["items"]:
+        assert item["skill_level"] == "BEGINNER"
+
+
+async def test_list_drills_search_by_title(client):
+    await client.post("/api/auth/register", json=USER1)
+    await client.post(
+        "/api/drills", json={**DRILL_PAYLOAD, "title": "Unique Spike Drill"}
+    )
+    await client.post("/api/drills", json={**DRILL_PAYLOAD, "title": "Other Exercise"})
+
+    r = await client.get("/api/drills?search=unique+spike")
+    assert r.status_code == 200
+    titles = [item["title"] for item in r.json()["items"]]
+    assert "Unique Spike Drill" in titles
+    assert "Other Exercise" not in titles
+
+
+async def test_list_drills_only_returns_public(client):
+    await client.post("/api/auth/register", json=USER1)
+    await client.post("/api/drills", json={**DRILL_PAYLOAD, "is_public": True})
+    await client.post(
+        "/api/drills",
+        json={**DRILL_PAYLOAD, "title": "Private Draft", "is_public": False},
+    )
+
+    # Unauthenticated request should only see public drills
+    client.cookies.clear()
+    r = await client.get("/api/drills")
+    assert r.status_code == 200
+    for item in r.json()["items"]:
+        assert item["is_public"] is True
+
+
+# ---------------------------------------------------------------------------
+# View count
+# ---------------------------------------------------------------------------
+
+
+async def test_drill_view_count_increments(client):
+    await client.post("/api/auth/register", json=USER1)
+    created = (await client.post("/api/drills", json=DRILL_PAYLOAD)).json()
+    drill_id = created["id"]
+    initial_view_count = created.get("view_count", 0)
+
+    await client.get(f"/api/drills/{drill_id}")
+    r2 = await client.get(f"/api/drills/{drill_id}")
+    assert r2.status_code == 200
+    assert r2.json()["view_count"] == initial_view_count + 2
+
+
+# ---------------------------------------------------------------------------
+# Analytics
+# ---------------------------------------------------------------------------
+
+
+async def test_drill_analytics_requires_auth(client):
+    r = await client.get("/api/drills/analytics")
+    assert r.status_code == 401
+
+
+async def test_drill_analytics_returns_own_drills(client):
+    await client.post("/api/auth/register", json=USER1)
+    await client.post("/api/drills", json=DRILL_PAYLOAD)
+    await client.post("/api/drills", json={**DRILL_PAYLOAD, "title": "Second Drill"})
+
+    r = await client.get("/api/drills/analytics")
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data) == 2
+    for item in data:
+        assert "view_count" in item
+        assert "likes_count" in item
+        assert "session_count" in item
+
+
+async def test_drill_analytics_excludes_other_users_drills(client):
+    await client.post("/api/auth/register", json=USER1)
+    await client.post("/api/drills", json=DRILL_PAYLOAD)
+
+    await client.post("/api/auth/register", json=USER2)
+    r = await client.get("/api/drills/analytics")
+    assert r.status_code == 200
+    # User2 has no drills
+    assert r.json() == []

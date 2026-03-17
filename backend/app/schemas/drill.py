@@ -58,8 +58,6 @@ class DrillOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     likes_count: int = 0
-    avg_rating: float | None = None
-    rating_count: int = 0
     view_count: int = 0
 
     model_config = {"from_attributes": True}
@@ -78,6 +76,4 @@ class DrillAnalyticsOut(BaseModel):
     title: str
     view_count: int
     likes_count: int
-    avg_rating: float | None
-    rating_count: int
     session_count: int

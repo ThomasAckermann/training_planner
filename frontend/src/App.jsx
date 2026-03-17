@@ -14,6 +14,8 @@ import SessionDetail from "./pages/SessionDetail.jsx";
 import SessionEdit from "./pages/SessionEdit.jsx";
 import SessionCoach from "./pages/SessionCoach.jsx";
 import Profile from "./pages/Profile.jsx";
+import ModuleNew from "./pages/ModuleNew.jsx";
+import ModuleEdit from "./pages/ModuleEdit.jsx";
 
 function ProtectedRoute({ children }) {
   const { user, isLoading } = useAuth();
@@ -101,6 +103,26 @@ export default function App() {
             }
           />
           <Route path="/profile/:userId" element={<Profile />} />
+          <Route
+            path="/modules"
+            element={<Navigate to="/me?tab=modules" replace />}
+          />
+          <Route
+            path="/modules/new"
+            element={
+              <ProtectedRoute>
+                <ModuleNew />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/modules/:id/edit"
+            element={
+              <ProtectedRoute>
+                <ModuleEdit />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -155,3 +155,99 @@ async def test_my_sessions_returns_own_sessions(client):
     r = await client.get("/api/sessions/mine")
     assert r.status_code == 200
     assert r.json()["total"] == 2
+
+
+# ---------------------------------------------------------------------------
+# Like toggle
+# ---------------------------------------------------------------------------
+
+
+async def test_like_session_requires_auth(client):
+    await client.post("/api/auth/register", json=USER1)
+    session_id = await _create_session(client)
+    client.cookies.clear()
+    r = await client.post(f"/api/sessions/{session_id}/like")
+    assert r.status_code == 401
+
+
+async def test_like_session_toggle(client):
+    await client.post("/api/auth/register", json=USER1)
+    session_id = await _create_session(client)
+
+    await client.post("/api/auth/register", json=USER2)
+    r1 = await client.post(f"/api/sessions/{session_id}/like")
+    assert r1.status_code == 200
+    assert r1.json()["liked"] is True
+
+    r2 = await client.post(f"/api/sessions/{session_id}/like")
+    assert r2.status_code == 200
+    assert r2.json()["liked"] is False
+
+
+# ---------------------------------------------------------------------------
+# Filtering
+# ---------------------------------------------------------------------------
+
+
+async def test_list_sessions_only_returns_public(client):
+    await client.post("/api/auth/register", json=USER1)
+    await client.post("/api/sessions", json={**SESSION_PAYLOAD, "is_public": True})
+    await client.post(
+        "/api/sessions",
+        json={**SESSION_PAYLOAD, "title": "Private Plan", "is_public": False},
+    )
+
+    client.cookies.clear()
+    r = await client.get("/api/sessions")
+    assert r.status_code == 200
+    for item in r.json()["items"]:
+        assert item["is_public"] is True
+
+
+async def test_list_sessions_search(client):
+    await client.post("/api/auth/register", json=USER1)
+    await client.post(
+        "/api/sessions", json={**SESSION_PAYLOAD, "title": "Advanced Block Training"}
+    )
+    await client.post(
+        "/api/sessions", json={**SESSION_PAYLOAD, "title": "Basic Warm-Up"}
+    )
+
+    r = await client.get("/api/sessions?search=advanced+block")
+    assert r.status_code == 200
+    titles = [item["title"] for item in r.json()["items"]]
+    assert "Advanced Block Training" in titles
+    assert "Basic Warm-Up" not in titles
+
+
+# ---------------------------------------------------------------------------
+# Session drill notes / duration override
+# ---------------------------------------------------------------------------
+
+
+async def test_add_drill_with_coach_notes(client):
+    await client.post("/api/auth/register", json=USER1)
+    session_id = await _create_session(client)
+    drill_id = await _create_drill(client)
+
+    r = await client.post(
+        f"/api/sessions/{session_id}/drills",
+        json={"drill_id": drill_id, "coach_notes": "Focus on footwork"},
+    )
+    assert r.status_code == 200
+    drill_entry = r.json()["drills"][0]
+    assert drill_entry["coach_notes"] == "Focus on footwork"
+
+
+async def test_add_drill_with_duration_override(client):
+    await client.post("/api/auth/register", json=USER1)
+    session_id = await _create_session(client)
+    drill_id = await _create_drill(client)
+
+    r = await client.post(
+        f"/api/sessions/{session_id}/drills",
+        json={"drill_id": drill_id, "duration_override": 30},
+    )
+    assert r.status_code == 200
+    drill_entry = r.json()["drills"][0]
+    assert drill_entry["duration_override"] == 30

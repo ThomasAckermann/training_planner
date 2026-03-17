@@ -11,6 +11,7 @@ from app.deps import get_current_user, get_current_user_optional
 
 from app.models.drill import Drill, Favourite
 from app.models.follow import Follow
+from app.models.module import TrainingModule
 from app.models.session import Session
 from app.models.user import User
 from app.schemas.user import PublicUserOut, UserOut
@@ -147,6 +148,7 @@ async def get_my_favourites(
 
     drill_ids = [f.drill_id for f in favs if f.drill_id]
     session_ids = [f.session_id for f in favs if f.session_id]
+    module_ids = [f.module_id for f in favs if f.module_id]
 
     drills = []
     if drill_ids:
@@ -159,6 +161,13 @@ async def get_my_favourites(
             select(Session).where(Session.id.in_(session_ids))
         )
         sessions = sessions_result.scalars().all()
+
+    modules = []
+    if module_ids:
+        modules_result = await db.execute(
+            select(TrainingModule).where(TrainingModule.id.in_(module_ids))
+        )
+        modules = modules_result.scalars().all()
 
     return {
         "drills": [
@@ -184,6 +193,17 @@ async def get_my_favourites(
                 "user_id": s.user_id,
             }
             for s in sessions
+        ],
+        "modules": [
+            {
+                "id": m.id,
+                "title": m.title,
+                "phase_type": m.phase_type,
+                "description": m.description,
+                "is_public": m.is_public,
+                "user_id": m.user_id,
+            }
+            for m in modules
         ],
     }
 

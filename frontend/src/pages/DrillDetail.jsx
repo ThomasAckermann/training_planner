@@ -9,15 +9,9 @@ import {
   Trash2,
   Users,
 } from "lucide-react";
-import {
-  useDrill,
-  useDeleteDrill,
-  useLikeDrill,
-  useRateDrill,
-} from "../hooks/useDrills.js";
+import { useDrill, useDeleteDrill, useLikeDrill } from "../hooks/useDrills.js";
 import { useFavouriteDrill } from "../hooks/useFavourites.js";
 import { useUserProfile } from "../hooks/useUsers.js";
-import StarRating from "../components/drill/StarRating.jsx";
 import {
   useDrillComments,
   useCreateDrillComment,
@@ -42,7 +36,6 @@ export default function DrillDetail() {
   const isOwner = user && drill && user.id === drill.user_id;
   const embedUrl = getEmbedUrl(drill?.video_url);
   const { data: author } = useUserProfile(drill?.user_id);
-  const rateDrill = useRateDrill();
   const focusLabel =
     FOCUS_AREAS.find((f) => f.value === drill?.focus_area)?.label ??
     drill?.focus_area;
@@ -186,16 +179,6 @@ export default function DrillDetail() {
               </Button>
             </>
           )}
-        </div>
-
-        {/* Star rating */}
-        <div className="mt-3">
-          <StarRating
-            avgRating={drill.avg_rating}
-            ratingCount={drill.rating_count}
-            onRate={user ? (score) => rateDrill.mutate({ id, score }) : null}
-            loading={rateDrill.isPending}
-          />
         </div>
       </div>
 

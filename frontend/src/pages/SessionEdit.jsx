@@ -3,8 +3,12 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { X, PlusCircle, Clock, Layers, ArrowLeft } from "lucide-react";
+import { X, PlusCircle, Clock, Layers, ArrowLeft, Package } from "lucide-react";
 import { useSession, useUpdateSession } from "../hooks/useSessions.js";
+import {
+  useMyModules,
+  useExpandModuleIntoSession,
+} from "../hooks/useModules.js";
 import useAuthStore from "../store/authStore.js";
 import { AGE_RANGES, FOCUS_AREAS, SKILL_LEVELS } from "../lib/constants.js";
 import SessionDrillList from "../components/session/SessionDrillList.jsx";
@@ -12,6 +16,13 @@ import DrillPickerPanel from "../components/session/DrillPickerPanel.jsx";
 import Input from "../components/ui/Input.jsx";
 import Button from "../components/ui/Button.jsx";
 import Card from "../components/ui/Card.jsx";
+
+const PHASE_LABELS = {
+  WARMUP: "Warm-up",
+  MAIN: "Main Part",
+  GAME: "Game",
+  COOLDOWN: "Cool-down",
+};
 
 const schema = z.object({
   title: z.string().min(1, "Title is required").max(200),
@@ -39,7 +50,11 @@ export default function SessionEdit() {
   const [tags, setTags] = useState([]);
   const [tagInput, setTagInput] = useState("");
   const [showDrillPicker, setShowDrillPicker] = useState(false);
+  const [showModulePicker, setShowModulePicker] = useState(false);
   const [formInitialized, setFormInitialized] = useState(false);
+
+  const { data: myModules } = useMyModules();
+  const expandModule = useExpandModuleIntoSession(id);
 
   const {
     register,
@@ -424,16 +439,26 @@ export default function SessionEdit() {
             >
               Drills ({session.drills?.length ?? 0})
             </h2>
-            {!showDrillPicker && (
+            <div className="flex gap-2">
+              {!showDrillPicker && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => setShowDrillPicker(true)}
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  Add Drills
+                </Button>
+              )}
               <Button
-                variant="primary"
+                variant="secondary"
                 size="sm"
-                onClick={() => setShowDrillPicker(true)}
+                onClick={() => setShowModulePicker((v) => !v)}
               >
-                <PlusCircle className="w-4 h-4" />
-                Add Drills
+                <Package className="w-4 h-4" />
+                Add Module
               </Button>
-            )}
+            </div>
           </div>
 
           <SessionDrillList
@@ -441,6 +466,89 @@ export default function SessionEdit() {
             sessionId={id}
             isOwner={isOwner}
           />
+
+          {showModulePicker && (
+            <div
+              className="rounded-xl border p-4 mt-4"
+              style={{
+                backgroundColor: "var(--color-surface)",
+                borderColor: "var(--color-border)",
+              }}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <h3
+                  className="font-semibold text-sm"
+                  style={{ color: "var(--color-text)" }}
+                >
+                  Add a Training Module
+                </h3>
+                <button
+                  onClick={() => setShowModulePicker(false)}
+                  style={{ color: "var(--color-text-muted)" }}
+                  aria-label="Close module picker"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              {(myModules ?? []).length === 0 ? (
+                <p
+                  className="text-sm"
+                  style={{ color: "var(--color-text-muted)" }}
+                >
+                  No modules yet.{" "}
+                  <a
+                    href="/modules/new"
+                    className="underline"
+                    style={{ color: "var(--color-accent)" }}
+                  >
+                    Create one
+                  </a>
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {(myModules ?? []).map((module) => (
+                    <div
+                      key={module.id}
+                      className="flex items-center gap-3 p-3 rounded-lg"
+                      style={{
+                        backgroundColor: "var(--color-surface-2)",
+                        border: "1px solid var(--color-border)",
+                      }}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className="font-medium text-sm"
+                          style={{ color: "var(--color-text)" }}
+                        >
+                          {module.title}
+                        </p>
+                        <p
+                          className="text-xs"
+                          style={{ color: "var(--color-text-muted)" }}
+                        >
+                          {PHASE_LABELS[module.phase_type] ?? module.phase_type}{" "}
+                          · {module.drills.length} drill
+                          {module.drills.length !== 1 ? "s" : ""}
+                        </p>
+                      </div>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        loading={expandModule.isPending}
+                        onClick={async () => {
+                          await expandModule.mutateAsync(module.id);
+                          setShowModulePicker(false);
+                        }}
+                      >
+                        <PlusCircle className="w-3.5 h-3.5" />
+                        Add
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {showDrillPicker && (
             <DrillPickerPanel

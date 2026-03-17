@@ -2,13 +2,22 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useDrills } from "../hooks/useDrills.js";
 import { useSessions } from "../hooks/useSessions.js";
+import { useModules } from "../hooks/useModules.js";
 import DrillCard from "../components/drill/DrillCard.jsx";
 import DrillFilters from "../components/drill/DrillFilters.jsx";
 import SessionCard from "../components/session/SessionCard.jsx";
+import ModuleCard from "../components/module/ModuleCard.jsx";
 import Card from "../components/ui/Card.jsx";
 import Button from "../components/ui/Button.jsx";
 import Input from "../components/ui/Input.jsx";
 import { AGE_RANGES, SKILL_LEVELS } from "../lib/constants.js";
+
+const PHASE_TYPES = [
+  { value: "WARMUP", label: "Warm-up" },
+  { value: "MAIN", label: "Main Part" },
+  { value: "GAME", label: "Game" },
+  { value: "COOLDOWN", label: "Cool-down" },
+];
 
 function SkeletonCard() {
   return (
@@ -337,6 +346,189 @@ function SessionsTab() {
   );
 }
 
+function ModulesTab() {
+  const [filters, setFilters] = useState({ page: 1, limit: 20 });
+  const { data, isLoading, isError } = useModules(filters);
+
+  const modules = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const pages = data?.pages ?? 1;
+  const currentPage = filters.page ?? 1;
+
+  function handlePageChange(newPage) {
+    setFilters((prev) => ({ ...prev, page: newPage }));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  return (
+    <>
+      <div
+        className="mb-6 p-4 rounded-xl border"
+        style={{
+          backgroundColor: "var(--color-surface)",
+          borderColor: "var(--color-border)",
+        }}
+      >
+        <div className="flex flex-wrap gap-3 items-end">
+          <div className="flex-1 min-w-0">
+            <Input
+              placeholder="Search modules..."
+              value={filters.search ?? ""}
+              onChange={(e) =>
+                setFilters((prev) => ({
+                  ...prev,
+                  search: e.target.value,
+                  page: 1,
+                }))
+              }
+            />
+          </div>
+          <div>
+            <select
+              value={filters.phase_type ?? ""}
+              onChange={(e) =>
+                setFilters((prev) => ({
+                  ...prev,
+                  phase_type: e.target.value || undefined,
+                  page: 1,
+                }))
+              }
+              className="px-3 py-2 rounded-lg text-sm"
+              style={{
+                backgroundColor: "var(--color-surface-2)",
+                border: "1px solid var(--color-border)",
+                color: "var(--color-text)",
+              }}
+            >
+              <option value="">All Phases</option>
+              {PHASE_TYPES.map((p) => (
+                <option key={p.value} value={p.value}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <select
+              value={filters.sort_by ?? "newest"}
+              onChange={(e) =>
+                setFilters((prev) => ({
+                  ...prev,
+                  sort_by: e.target.value,
+                  page: 1,
+                }))
+              }
+              className="px-3 py-2 rounded-lg text-sm"
+              style={{
+                backgroundColor: "var(--color-surface-2)",
+                border: "1px solid var(--color-border)",
+                color: "var(--color-text)",
+              }}
+            >
+              <option value="newest">Newest</option>
+              <option value="most_liked">Most Liked</option>
+            </select>
+          </div>
+          {(filters.search || filters.phase_type) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setFilters({ page: 1, limit: 20 })}
+            >
+              Clear
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {!isLoading && (
+        <p
+          className="text-sm mb-4"
+          style={{ color: "var(--color-text-muted)" }}
+        >
+          {total === 0
+            ? "No modules found"
+            : `${total} module${total !== 1 ? "s" : ""} found`}
+        </p>
+      )}
+
+      {isLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </div>
+      ) : isError ? (
+        <div
+          className="text-center py-20 rounded-xl border"
+          style={{
+            borderColor: "var(--color-border)",
+            backgroundColor: "var(--color-surface)",
+          }}
+        >
+          <p className="text-danger text-lg">
+            Failed to load modules. Please try again.
+          </p>
+        </div>
+      ) : modules.length === 0 ? (
+        <div
+          className="text-center py-20 rounded-xl border"
+          style={{
+            borderColor: "var(--color-border)",
+            backgroundColor: "var(--color-surface)",
+          }}
+        >
+          <div className="text-4xl mb-3">📦</div>
+          <p
+            className="text-lg font-medium mb-2"
+            style={{ color: "var(--color-text)" }}
+          >
+            No modules found
+          </p>
+          <p style={{ color: "var(--color-text-muted)" }}>
+            Try adjusting your filters or search term
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {modules.map((module) => (
+            <ModuleCard key={module.id} module={module} />
+          ))}
+        </div>
+      )}
+
+      {pages > 1 && (
+        <div className="flex items-center justify-center gap-3 mt-10">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage <= 1}
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Prev
+          </Button>
+          <span
+            className="text-sm"
+            style={{ color: "var(--color-text-muted)" }}
+          >
+            Page {currentPage} of {pages}
+          </span>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage >= pages}
+          >
+            Next
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function Explore() {
   const [activeTab, setActiveTab] = useState("drills");
 
@@ -354,7 +546,7 @@ export default function Explore() {
           Explore
         </h1>
         <p style={{ color: "var(--color-text-muted)" }}>
-          Browse the community drill and session library
+          Browse the community drill, session, and module library
         </p>
       </div>
 
@@ -366,6 +558,7 @@ export default function Explore() {
         {[
           { key: "drills", label: "Drills" },
           { key: "sessions", label: "Sessions" },
+          { key: "modules", label: "Modules" },
         ].map((tab) => (
           <button
             key={tab.key}
@@ -386,7 +579,9 @@ export default function Explore() {
       </div>
 
       {/* Tab content */}
-      {activeTab === "drills" ? <DrillsTab /> : <SessionsTab />}
+      {activeTab === "drills" && <DrillsTab />}
+      {activeTab === "sessions" && <SessionsTab />}
+      {activeTab === "modules" && <ModulesTab />}
     </div>
   );
 }

@@ -36,31 +36,6 @@ function CourtBackground() {
   const attackL = CENTER_X - ATTACK_OFFSET;
   const attackR = CENTER_X + ATTACK_OFFSET;
 
-  const zoneLabels = [
-    {
-      label: "4",
-      x: COURT_X + (attackL - COURT_X) / 2,
-      y: COURT_Y + COURT_H / 4,
-    },
-    { label: "3", x: (attackL + CENTER_X) / 2, y: COURT_Y + COURT_H / 4 },
-    {
-      label: "2",
-      x: CENTER_X + (attackR - CENTER_X) / 2,
-      y: COURT_Y + COURT_H / 4,
-    },
-    {
-      label: "1",
-      x: attackR + (COURT_X + COURT_W - attackR) / 2,
-      y: COURT_Y + COURT_H / 4,
-    },
-    {
-      label: "5",
-      x: COURT_X + (attackL - COURT_X) / 2,
-      y: COURT_Y + (COURT_H * 3) / 4,
-    },
-    { label: "6", x: (attackL + CENTER_X) / 2, y: COURT_Y + (COURT_H * 3) / 4 },
-  ];
-
   return (
     <>
       <Rect
@@ -107,18 +82,6 @@ function CourtBackground() {
         fill={NET_COLOR}
         listening={false}
       />
-      {zoneLabels.map(({ label, x, y }) => (
-        <Text
-          key={label}
-          x={x - 6}
-          y={y - 8}
-          text={label}
-          fontSize={14}
-          fill="rgba(255,255,255,0.18)"
-          fontStyle="bold"
-          listening={false}
-        />
-      ))}
     </>
   );
 }

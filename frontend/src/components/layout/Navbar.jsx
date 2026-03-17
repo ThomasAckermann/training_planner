@@ -106,6 +106,13 @@ export default function Navbar() {
                   <PlusCircle className="w-4 h-4" />
                   New Session
                 </Link>
+                <Link
+                  to="/me?tab=modules"
+                  className="px-3 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-surface2"
+                  style={{ color: "var(--color-text-muted)" }}
+                >
+                  Modules
+                </Link>
               </>
             )}
           </div>
@@ -234,6 +241,13 @@ export default function Navbar() {
                 style={{ color: "var(--color-text-muted)" }}
               >
                 + New Session
+              </Link>
+              <Link
+                to="/me?tab=modules"
+                className={navLinkClass}
+                style={{ color: "var(--color-text-muted)" }}
+              >
+                Modules
               </Link>
               <button
                 onClick={() => {

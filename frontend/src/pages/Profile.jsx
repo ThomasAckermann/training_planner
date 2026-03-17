@@ -8,10 +8,19 @@ import {
   Trophy,
   UserPlus,
   UserCheck,
+  Eye,
+  EyeOff,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { useUserProfile, useFollow } from "../hooks/useUsers.js";
-import { useDrills } from "../hooks/useDrills.js";
-import { useSessions } from "../hooks/useSessions.js";
+import { useDrills, useMyDrills, useDeleteDrill } from "../hooks/useDrills.js";
+import {
+  useSessions,
+  useMySessions,
+  useDeleteSession,
+} from "../hooks/useSessions.js";
+import { useModules, useMyModules } from "../hooks/useModules.js";
 import useAuthStore from "../store/authStore.js";
 import Badge from "../components/ui/Badge.jsx";
 import Button from "../components/ui/Button.jsx";
@@ -25,11 +34,35 @@ const COACHING_LEVEL_LABELS = {
   national: "National License",
 };
 
+const PHASE_LABELS = {
+  WARMUP: "Warm-up",
+  MAIN: "Main Part",
+  GAME: "Game",
+  COOLDOWN: "Cool-down",
+};
+
+const PHASE_COLORS = {
+  WARMUP: {
+    bg: "#c8f13522",
+    border: "#c8f13566",
+    color: "var(--color-accent)",
+  },
+  MAIN: { bg: "#4a9eff22", border: "#4a9eff66", color: "#4a9eff" },
+  GAME: { bg: "#00d68f22", border: "#00d68f66", color: "var(--color-success)" },
+  COOLDOWN: {
+    bg: "#7a849922",
+    border: "#7a849966",
+    color: "var(--color-text-muted)",
+  },
+};
+
 export default function Profile() {
   const { userId } = useParams();
   const navigate = useNavigate();
   const [tab, setTab] = useState("sessions");
   const currentUser = useAuthStore((state) => state.user);
+
+  const isOwnProfile = currentUser?.id === userId;
 
   const {
     data: profile,
@@ -37,17 +70,51 @@ export default function Profile() {
     isError,
   } = useUserProfile(userId);
   const follow = useFollow(userId);
-  const { data: drillData, isLoading: drillsLoading } = useDrills({
+
+  const { data: publicDrillData, isLoading: publicDrillsLoading } = useDrills({
     author_id: userId,
     limit: 50,
   });
-  const { data: sessionData, isLoading: sessionsLoading } = useSessions({
-    author_id: userId,
+  const { data: myDrillData, isLoading: myDrillsLoading } = useMyDrills({
     limit: 50,
   });
+  const { data: publicSessionData, isLoading: publicSessionsLoading } =
+    useSessions({ author_id: userId, limit: 50 });
+  const { data: mySessionData, isLoading: mySessionsLoading } = useMySessions({
+    limit: 50,
+  });
+  const { data: publicModuleData, isLoading: publicModulesLoading } =
+    useModules({ author_id: userId, limit: 50 });
+  const { data: myModuleData, isLoading: myModulesLoading } = useMyModules();
+
+  const deleteDrill = useDeleteDrill();
+  const deleteSession = useDeleteSession();
+
+  const drillData = isOwnProfile ? myDrillData : publicDrillData;
+  const drillsLoading = isOwnProfile ? myDrillsLoading : publicDrillsLoading;
+  const sessionData = isOwnProfile ? mySessionData : publicSessionData;
+  const sessionsLoading = isOwnProfile
+    ? mySessionsLoading
+    : publicSessionsLoading;
+  const modulesLoading = isOwnProfile ? myModulesLoading : publicModulesLoading;
 
   const drills = drillData?.items ?? [];
   const sessions = sessionData?.items ?? [];
+  const rawModules = isOwnProfile
+    ? myModuleData ?? []
+    : publicModuleData?.items ?? [];
+
+  async function handleDeleteDrill(e, id) {
+    e.stopPropagation();
+    if (!confirm("Delete this drill? This action cannot be undone.")) return;
+    await deleteDrill.mutateAsync(id);
+  }
+
+  async function handleDeleteSession(e, id) {
+    e.stopPropagation();
+    if (!confirm("Delete this session? This action cannot be undone.")) return;
+    await deleteSession.mutateAsync(id);
+  }
 
   if (profileLoading) {
     return (
@@ -82,6 +149,7 @@ export default function Profile() {
   }
 
   const joinYear = new Date(profile.created_at).getFullYear();
+  const publicModules = rawModules.filter((m) => m.is_public || isOwnProfile);
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -173,7 +241,7 @@ export default function Profile() {
                   color: "var(--color-accent)",
                 }}
               >
-                {sessionData?.total ?? "—"}
+                {sessionData?.total ?? sessions.length ?? "—"}
               </div>
               <div
                 className="text-xs"
@@ -190,7 +258,7 @@ export default function Profile() {
                   color: "var(--color-accent)",
                 }}
               >
-                {drillData?.total ?? "—"}
+                {drillData?.total ?? drills.length ?? "—"}
               </div>
               <div
                 className="text-xs"
@@ -252,8 +320,8 @@ export default function Profile() {
             </div>
           </div>
 
-          {/* Follow button */}
-          {currentUser && currentUser.id !== userId && (
+          {/* Follow button — only for other users */}
+          {currentUser && !isOwnProfile && (
             <div className="mt-4">
               <Button
                 variant={profile.is_following ? "secondary" : "primary"}
@@ -281,16 +349,18 @@ export default function Profile() {
 
       {/* Tab bar */}
       <div
-        className="flex gap-1 mb-6 p-1 rounded-xl border"
+        className="flex gap-1 mb-6 p-1 rounded-xl border overflow-x-auto"
         style={{
           backgroundColor: "var(--color-surface)",
           borderColor: "var(--color-border)",
           width: "fit-content",
+          maxWidth: "100%",
         }}
       >
         {[
           { key: "sessions", label: "Sessions" },
           { key: "drills", label: "Drills" },
+          { key: "modules", label: "Modules" },
         ].map(({ key, label }) => (
           <button
             key={key}
@@ -337,26 +407,60 @@ export default function Profile() {
                 className="text-lg"
                 style={{ color: "var(--color-text-muted)" }}
               >
-                No public sessions yet
+                {isOwnProfile ? "No sessions yet" : "No public sessions yet"}
               </p>
             </div>
           ) : (
             <div className="space-y-3">
               {sessions.map((session) => (
-                <Card
-                  key={session.id}
-                  hoverable
-                  className="cursor-pointer"
-                  onClick={() => navigate(`/sessions/${session.id}`)}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="flex-1 min-w-0">
-                      <p
-                        className="font-semibold mb-1 truncate"
-                        style={{ color: "var(--color-text)" }}
+                <Card key={session.id} hoverable className="cursor-pointer">
+                  <div className="flex flex-wrap items-center gap-3">
+                    {isOwnProfile && (
+                      <div
+                        className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center"
+                        style={{
+                          backgroundColor: session.is_public
+                            ? "#cc141422"
+                            : "#88888822",
+                        }}
+                        title={session.is_public ? "Public" : "Draft"}
                       >
-                        {session.title}
-                      </p>
+                        {session.is_public ? (
+                          <Eye
+                            className="w-4 h-4"
+                            style={{ color: "var(--color-accent)" }}
+                          />
+                        ) : (
+                          <EyeOff
+                            className="w-4 h-4"
+                            style={{ color: "var(--color-text-muted)" }}
+                          />
+                        )}
+                      </div>
+                    )}
+                    <div
+                      className="flex-1 min-w-0"
+                      onClick={() => navigate(`/sessions/${session.id}`)}
+                    >
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <p
+                          className="font-semibold truncate"
+                          style={{ color: "var(--color-text)" }}
+                        >
+                          {session.title}
+                        </p>
+                        {isOwnProfile && !session.is_public && (
+                          <span
+                            className="text-xs px-1.5 py-0.5 rounded font-mono"
+                            style={{
+                              backgroundColor: "#88888822",
+                              color: "var(--color-text-muted)",
+                            }}
+                          >
+                            draft
+                          </span>
+                        )}
+                      </div>
                       <div className="flex flex-wrap items-center gap-2">
                         {session.skill_level && (
                           <Badge variant="skill">{session.skill_level}</Badge>
@@ -382,6 +486,29 @@ export default function Profile() {
                         )}
                       </div>
                     </div>
+                    {isOwnProfile && (
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/sessions/${session.id}/edit`);
+                          }}
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          loading={deleteSession.isPending}
+                          onClick={(e) => handleDeleteSession(e, session.id)}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </Card>
               ))}
@@ -415,7 +542,7 @@ export default function Profile() {
                 className="text-lg"
                 style={{ color: "var(--color-text-muted)" }}
               >
-                No public drills yet
+                {isOwnProfile ? "No drills yet" : "No public drills yet"}
               </p>
             </div>
           ) : (
@@ -425,48 +552,201 @@ export default function Profile() {
                   FOCUS_AREAS.find((f) => f.value === drill.focus_area)
                     ?.label ?? drill.focus_area;
                 return (
-                  <Card
-                    key={drill.id}
-                    hoverable
-                    className="cursor-pointer"
-                    onClick={() => navigate(`/drills/${drill.id}`)}
-                  >
-                    <div className="flex items-center gap-4">
-                      {drill.drawing_thumb_url && (
-                        <img
-                          src={drill.drawing_thumb_url}
-                          alt=""
-                          className="w-14 h-10 rounded object-cover flex-shrink-0"
-                          style={{ border: "1px solid var(--color-border)" }}
-                        />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p
-                          className="font-semibold mb-1 truncate"
-                          style={{ color: "var(--color-text)" }}
+                  <Card key={drill.id} hoverable className="cursor-pointer">
+                    <div className="flex flex-wrap items-center gap-3">
+                      {isOwnProfile && (
+                        <div
+                          className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center"
+                          style={{
+                            backgroundColor: drill.is_public
+                              ? "#cc141422"
+                              : "#88888822",
+                          }}
+                          title={drill.is_public ? "Public" : "Draft"}
                         >
-                          {drill.title}
-                        </p>
-                        <div className="flex flex-wrap items-center gap-2">
-                          {drill.focus_area && (
-                            <Badge variant="focus">{focusLabel}</Badge>
-                          )}
-                          {drill.skill_level && (
-                            <Badge variant="skill">{drill.skill_level}</Badge>
-                          )}
-                          {drill.age_range && (
-                            <Badge variant="age">{drill.age_range}</Badge>
-                          )}
-                          {drill.duration_minutes && (
-                            <span
-                              className="flex items-center gap-1 text-xs"
+                          {drill.is_public ? (
+                            <Eye
+                              className="w-4 h-4"
+                              style={{ color: "var(--color-accent)" }}
+                            />
+                          ) : (
+                            <EyeOff
+                              className="w-4 h-4"
                               style={{ color: "var(--color-text-muted)" }}
+                            />
+                          )}
+                        </div>
+                      )}
+                      <div
+                        className="flex-1 min-w-0"
+                        onClick={() => navigate(`/drills/${drill.id}`)}
+                      >
+                        <div className="flex items-center gap-4">
+                          {drill.drawing_thumb_url && (
+                            <img
+                              src={drill.drawing_thumb_url}
+                              alt=""
+                              className="w-14 h-10 rounded object-cover flex-shrink-0"
+                              style={{
+                                border: "1px solid var(--color-border)",
+                              }}
+                            />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 mb-1">
+                              <p
+                                className="font-semibold truncate"
+                                style={{ color: "var(--color-text)" }}
+                              >
+                                {drill.title}
+                              </p>
+                              {isOwnProfile && !drill.is_public && (
+                                <span
+                                  className="text-xs px-1.5 py-0.5 rounded font-mono"
+                                  style={{
+                                    backgroundColor: "#88888822",
+                                    color: "var(--color-text-muted)",
+                                  }}
+                                >
+                                  draft
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              {drill.focus_area && (
+                                <Badge variant="focus">{focusLabel}</Badge>
+                              )}
+                              {drill.skill_level && (
+                                <Badge variant="skill">
+                                  {drill.skill_level}
+                                </Badge>
+                              )}
+                              {drill.age_range && (
+                                <Badge variant="age">{drill.age_range}</Badge>
+                              )}
+                              {drill.duration_minutes && (
+                                <span
+                                  className="flex items-center gap-1 text-xs"
+                                  style={{ color: "var(--color-text-muted)" }}
+                                >
+                                  <Clock className="w-3 h-3" />
+                                  {drill.duration_minutes} min
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      {isOwnProfile && (
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/drills/${drill.id}/edit`);
+                            }}
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            loading={deleteDrill.isPending}
+                            onClick={(e) => handleDeleteDrill(e, drill.id)}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Modules tab */}
+      {tab === "modules" && (
+        <div>
+          {modulesLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-20 rounded-xl animate-pulse"
+                  style={{ backgroundColor: "var(--color-surface)" }}
+                />
+              ))}
+            </div>
+          ) : publicModules.length === 0 ? (
+            <div
+              className="text-center py-14 rounded-xl border"
+              style={{
+                borderColor: "var(--color-border)",
+                backgroundColor: "var(--color-surface)",
+              }}
+            >
+              <p
+                className="text-lg"
+                style={{ color: "var(--color-text-muted)" }}
+              >
+                {isOwnProfile ? "No modules yet" : "No public modules yet"}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {publicModules.map((module) => {
+                const colors =
+                  PHASE_COLORS[module.phase_type] ?? PHASE_COLORS.MAIN;
+                return (
+                  <Card key={module.id} hoverable>
+                    <div className="flex items-center gap-4">
+                      <div
+                        className="flex-1 min-w-0"
+                        onClick={() => navigate(`/modules/${module.id}/edit`)}
+                        style={{ cursor: "pointer" }}
+                      >
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <p
+                            className="font-semibold truncate"
+                            style={{ color: "var(--color-text)" }}
+                          >
+                            {module.title}
+                          </p>
+                          <span
+                            className="text-xs font-mono font-bold uppercase px-2 py-0.5 rounded-full"
+                            style={{
+                              backgroundColor: colors.bg,
+                              border: `1px solid ${colors.border}`,
+                              color: colors.color,
+                            }}
+                          >
+                            {PHASE_LABELS[module.phase_type] ??
+                              module.phase_type}
+                          </span>
+                          {isOwnProfile && !module.is_public && (
+                            <span
+                              className="text-xs px-1.5 py-0.5 rounded font-mono"
+                              style={{
+                                backgroundColor: "#88888822",
+                                color: "var(--color-text-muted)",
+                              }}
                             >
-                              <Clock className="w-3 h-3" />
-                              {drill.duration_minutes} min
+                              draft
                             </span>
                           )}
                         </div>
+                        <span
+                          className="flex items-center gap-1 text-xs"
+                          style={{ color: "var(--color-text-muted)" }}
+                        >
+                          <Layers className="w-3 h-3" />
+                          {module.drills?.length ?? 0} drills
+                        </span>
                       </div>
                     </div>
                   </Card>

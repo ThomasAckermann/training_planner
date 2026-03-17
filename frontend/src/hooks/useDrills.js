@@ -126,27 +126,6 @@ export function useLikeDrill() {
   });
 }
 
-export function useRateDrill() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ id, score }) => {
-      const response = await api.post(`/api/drills/${id}/rate`, null, {
-        params: { score },
-      });
-      return response.data;
-    },
-    onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: ["drill", id] });
-      queryClient.invalidateQueries({ queryKey: ["drills"] });
-    },
-    onError: (error) => {
-      const message = error.response?.data?.detail || "Failed to submit rating";
-      toast.error(message);
-    },
-  });
-}
-
 export function useDrillAnalytics() {
   return useQuery({
     queryKey: ["drills", "analytics"],

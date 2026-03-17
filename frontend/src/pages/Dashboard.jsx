@@ -6,22 +6,14 @@ import {
   Pencil,
   Trash2,
   Eye,
-  EyeOff,
   Layers,
-  Clock,
-  BarChart2,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-import {
-  useMyDrills,
-  useDeleteDrill,
-  useDrillAnalytics,
-} from "../hooks/useDrills.js";
-import { useMySessions, useDeleteSession } from "../hooks/useSessions.js";
+import { useDrillAnalytics } from "../hooks/useDrills.js";
 import { useMyFavourites } from "../hooks/useFavourites.js";
+import { useMyModules, useDeleteModule } from "../hooks/useModules.js";
 import useAuthStore from "../store/authStore.js";
-import DrillFilters from "../components/drill/DrillFilters.jsx";
 import Badge from "../components/ui/Badge.jsx";
 import Button from "../components/ui/Button.jsx";
 import Card from "../components/ui/Card.jsx";
@@ -29,10 +21,32 @@ import { FOCUS_AREAS } from "../lib/constants.js";
 import api from "../lib/api.js";
 import toast from "react-hot-toast";
 
+const PHASE_LABELS = {
+  WARMUP: "Warm-up",
+  MAIN: "Main Part",
+  GAME: "Game",
+  COOLDOWN: "Cool-down",
+};
+
+const PHASE_COLORS = {
+  WARMUP: {
+    bg: "#c8f13522",
+    border: "#c8f13566",
+    color: "var(--color-accent)",
+  },
+  MAIN: { bg: "#4a9eff22", border: "#4a9eff66", color: "#4a9eff" },
+  GAME: { bg: "#00d68f22", border: "#00d68f66", color: "var(--color-success)" },
+  COOLDOWN: {
+    bg: "#7a849922",
+    border: "#7a849966",
+    color: "var(--color-text-muted)",
+  },
+};
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const tab = searchParams.get("tab") ?? "sessions";
+  const tab = searchParams.get("tab") ?? "modules";
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
   const avatarInputRef = useRef(null);
@@ -56,35 +70,24 @@ export default function Dashboard() {
       setAvatarUploading(false);
     }
   }
-  const [drillFilters, setDrillFilters] = useState({ page: 1, limit: 20 });
-  const [sessionFilters, setSessionFilters] = useState({ page: 1, limit: 20 });
 
-  const { data: drillData, isLoading: drillsLoading } =
-    useMyDrills(drillFilters);
-  const { data: sessionData, isLoading: sessionsLoading } =
-    useMySessions(sessionFilters);
   const { data: favourites } = useMyFavourites();
   const { data: analyticsData } = useDrillAnalytics();
   const [analyticsSortKey, setAnalyticsSortKey] = useState("view_count");
   const [analyticsSortAsc, setAnalyticsSortAsc] = useState(false);
-  const deleteDrill = useDeleteDrill();
-  const deleteSession = useDeleteSession();
 
-  const drills = drillData?.items ?? [];
-  const drillTotal = drillData?.total ?? 0;
-  const sessions = sessionData?.items ?? [];
-  const sessionTotal = sessionData?.total ?? 0;
+  const { data: modules, isLoading: modulesLoading } = useMyModules();
+  const deleteModule = useDeleteModule();
 
-  async function handleDeleteDrill(e, id) {
+  async function handleDeleteModule(e, id) {
     e.stopPropagation();
-    if (!confirm("Delete this drill? This action cannot be undone.")) return;
-    await deleteDrill.mutateAsync(id);
+    if (!confirm("Delete this module? This action cannot be undone.")) return;
+    await deleteModule.mutateAsync(id);
   }
 
-  async function handleDeleteSession(e, id) {
-    e.stopPropagation();
-    if (!confirm("Delete this session? This action cannot be undone.")) return;
-    await deleteSession.mutateAsync(id);
+  const grouped = {};
+  for (const phase of ["WARMUP", "MAIN", "GAME", "COOLDOWN"]) {
+    grouped[phase] = (modules ?? []).filter((m) => m.phase_type === phase);
   }
 
   return (
@@ -150,9 +153,7 @@ export default function Dashboard() {
             className="mt-1 text-sm"
             style={{ color: "var(--color-text-muted)" }}
           >
-            Welcome back, {user?.name} &middot; {drillTotal} drill
-            {drillTotal !== 1 ? "s" : ""} &middot; {sessionTotal} session
-            {sessionTotal !== 1 ? "s" : ""}
+            Welcome back, {user?.name}
           </p>
         </div>
       </div>
@@ -168,8 +169,7 @@ export default function Dashboard() {
         }}
       >
         {[
-          { key: "sessions", label: "My Sessions" },
-          { key: "drills", label: "My Drills" },
+          { key: "modules", label: "My Modules" },
           { key: "favourites", label: "Favourites" },
           { key: "analytics", label: "Analytics" },
         ].map(({ key, label }) => (
@@ -193,8 +193,8 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* ── My Sessions ── */}
-      {tab === "sessions" && (
+      {/* ── My Modules ── */}
+      {tab === "modules" && (
         <section className="mb-12">
           <div className="flex items-center justify-between mb-4">
             <h2
@@ -204,21 +204,21 @@ export default function Dashboard() {
                 color: "var(--color-text)",
               }}
             >
-              My Sessions
+              My Modules
             </h2>
             <Button
               variant="primary"
               size="sm"
-              onClick={() => navigate("/sessions/new")}
+              onClick={() => navigate("/modules/new")}
             >
               <PlusCircle className="w-4 h-4" />
-              New Session
+              New Module
             </Button>
           </div>
 
-          {sessionsLoading ? (
-            <div className="space-y-3">
-              {Array.from({ length: 3 }).map((_, i) => (
+          {modulesLoading ? (
+            <div className="space-y-4">
+              {Array.from({ length: 4 }).map((_, i) => (
                 <div
                   key={i}
                   className="h-20 rounded-xl animate-pulse"
@@ -226,135 +226,123 @@ export default function Dashboard() {
                 />
               ))}
             </div>
-          ) : sessions.length === 0 ? (
+          ) : (modules ?? []).length === 0 ? (
             <div
-              className="text-center py-14 rounded-xl border"
+              className="text-center py-20 rounded-2xl border"
               style={{
                 borderColor: "var(--color-border)",
                 backgroundColor: "var(--color-surface)",
               }}
             >
-              <div className="text-4xl mb-3">📋</div>
+              <div className="text-5xl mb-4">📦</div>
               <p
-                className="text-lg font-medium mb-2"
+                className="text-xl font-semibold mb-2"
                 style={{ color: "var(--color-text)" }}
               >
-                No sessions yet
+                No modules yet
               </p>
               <p className="mb-6" style={{ color: "var(--color-text-muted)" }}>
-                Create your first training session
+                Create reusable phase blocks to build sessions faster.
               </p>
               <Button
                 variant="primary"
-                onClick={() => navigate("/sessions/new")}
+                onClick={() => navigate("/modules/new")}
               >
                 <PlusCircle className="w-4 h-4" />
-                Create Session
+                Create Module
               </Button>
             </div>
           ) : (
-            <div className="space-y-3">
-              {sessions.map((session) => (
-                <Card key={session.id} hoverable className="cursor-pointer">
-                  <div className="flex flex-wrap items-center gap-3">
-                    {/* Visibility indicator */}
-                    <div
-                      className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center"
-                      style={{
-                        backgroundColor: session.is_public
-                          ? "#cc141422"
-                          : "#88888822",
-                      }}
-                      title={session.is_public ? "Public" : "Draft"}
-                    >
-                      {session.is_public ? (
-                        <Eye
-                          className="w-4 h-4"
-                          style={{ color: "var(--color-accent)" }}
-                        />
-                      ) : (
-                        <EyeOff
-                          className="w-4 h-4"
-                          style={{ color: "var(--color-text-muted)" }}
-                        />
-                      )}
-                    </div>
-
-                    {/* Main info */}
-                    <div
-                      className="flex-1 min-w-0"
-                      onClick={() => navigate(`/sessions/${session.id}`)}
-                    >
-                      <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <span
-                          className="font-semibold truncate"
-                          style={{ color: "var(--color-text)" }}
-                        >
-                          {session.title}
-                        </span>
-                        {!session.is_public && (
-                          <span
-                            className="text-xs px-1.5 py-0.5 rounded font-mono"
-                            style={{
-                              backgroundColor: "#88888822",
-                              color: "var(--color-text-muted)",
-                            }}
-                          >
-                            draft
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        {session.skill_level && (
-                          <Badge variant="skill">{session.skill_level}</Badge>
-                        )}
-                        {session.age_range && (
-                          <Badge variant="age">{session.age_range}</Badge>
-                        )}
-                        <span
-                          className="flex items-center gap-1 text-xs"
-                          style={{ color: "var(--color-text-muted)" }}
-                        >
-                          <Layers className="w-3 h-3" />
-                          {session.drills?.length ?? 0} drills
-                        </span>
-                        {session.total_duration_minutes > 0 && (
-                          <span
-                            className="flex items-center gap-1 text-xs"
-                            style={{ color: "var(--color-text-muted)" }}
-                          >
-                            <Clock className="w-3 h-3" />
-                            {session.total_duration_minutes} min
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/sessions/${session.id}/edit`);
+            <div className="space-y-10">
+              {Object.entries(grouped).map(([phase, items]) => {
+                if (items.length === 0) return null;
+                const colors = PHASE_COLORS[phase];
+                return (
+                  <section key={phase}>
+                    <div className="flex items-center gap-3 mb-4">
+                      <span
+                        className="text-xs font-mono font-bold uppercase px-2.5 py-1 rounded-full"
+                        style={{
+                          backgroundColor: colors.bg,
+                          border: `1px solid ${colors.border}`,
+                          color: colors.color,
                         }}
                       >
-                        <Pencil className="w-3.5 h-3.5" />
-                        Edit
-                      </Button>
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        loading={deleteSession.isPending}
-                        onClick={(e) => handleDeleteSession(e, session.id)}
+                        {PHASE_LABELS[phase]}
+                      </span>
+                      <span
+                        className="text-sm"
+                        style={{ color: "var(--color-text-muted)" }}
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
+                        {items.length} module{items.length !== 1 ? "s" : ""}
+                      </span>
                     </div>
-                  </div>
-                </Card>
-              ))}
+                    <div className="space-y-3">
+                      {items.map((module) => (
+                        <Card key={module.id} hoverable>
+                          <div className="flex flex-wrap items-center gap-3">
+                            <div
+                              className="flex-1 min-w-0"
+                              onClick={() =>
+                                navigate(`/modules/${module.id}/edit`)
+                              }
+                              style={{ cursor: "pointer" }}
+                            >
+                              <div className="flex flex-wrap items-center gap-2 mb-1">
+                                <span
+                                  className="font-semibold truncate"
+                                  style={{ color: "var(--color-text)" }}
+                                >
+                                  {module.title}
+                                </span>
+                                {module.is_public && <Badge>Public</Badge>}
+                              </div>
+                              <div
+                                className="flex items-center gap-3 text-xs"
+                                style={{ color: "var(--color-text-muted)" }}
+                              >
+                                <span className="flex items-center gap-1">
+                                  <Layers className="w-3 h-3" />
+                                  {module.drills.length} drill
+                                  {module.drills.length !== 1 ? "s" : ""}
+                                </span>
+                                {module.description && (
+                                  <span className="truncate max-w-xs">
+                                    {module.description}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/modules/${module.id}/edit`);
+                                }}
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                                Edit
+                              </Button>
+                              <Button
+                                variant="danger"
+                                size="sm"
+                                loading={deleteModule.isPending}
+                                onClick={(e) =>
+                                  handleDeleteModule(e, module.id)
+                                }
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  </section>
+                );
+              })}
             </div>
           )}
         </section>
@@ -429,11 +417,14 @@ export default function Dashboard() {
             Favourite Sessions
           </h2>
           {(favourites?.sessions ?? []).length === 0 ? (
-            <p style={{ color: "var(--color-text-muted)" }} className="text-sm">
+            <p
+              style={{ color: "var(--color-text-muted)" }}
+              className="text-sm mb-8"
+            >
               No favourite sessions yet. Bookmark sessions to find them here.
             </p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-3 mb-8">
               {(favourites?.sessions ?? []).map((session) => (
                 <Card
                   key={session.id}
@@ -461,6 +452,60 @@ export default function Dashboard() {
                   </div>
                 </Card>
               ))}
+            </div>
+          )}
+
+          <h2
+            className="text-2xl tracking-wide mb-4"
+            style={{
+              fontFamily: '"Bebas Neue", cursive',
+              color: "var(--color-text)",
+            }}
+          >
+            Favourite Modules
+          </h2>
+          {(favourites?.modules ?? []).length === 0 ? (
+            <p style={{ color: "var(--color-text-muted)" }} className="text-sm">
+              No favourite modules yet. Bookmark modules to find them here.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {(favourites?.modules ?? []).map((module) => {
+                const colors =
+                  PHASE_COLORS[module.phase_type] ?? PHASE_COLORS.MAIN;
+                return (
+                  <Card
+                    key={module.id}
+                    hoverable
+                    className="cursor-pointer"
+                    onClick={() => navigate(`/modules/${module.id}/edit`)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <span
+                          className="font-semibold"
+                          style={{ color: "var(--color-text)" }}
+                        >
+                          {module.title}
+                        </span>
+                        <div className="flex flex-wrap gap-1.5 mt-1">
+                          <span
+                            className="text-xs font-mono font-bold uppercase px-2 py-0.5 rounded-full"
+                            style={{
+                              backgroundColor: colors.bg,
+                              border: `1px solid ${colors.border}`,
+                              color: colors.color,
+                            }}
+                          >
+                            {PHASE_LABELS[module.phase_type] ??
+                              module.phase_type}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </section>
@@ -511,7 +556,6 @@ export default function Dashboard() {
                       { key: "title", label: "Drill" },
                       { key: "view_count", label: "Views" },
                       { key: "likes_count", label: "Likes" },
-                      { key: "avg_rating", label: "Avg Rating" },
                       { key: "session_count", label: "In Sessions" },
                     ].map(({ key, label }) => (
                       <th
@@ -592,197 +636,12 @@ export default function Dashboard() {
                           className="px-4 py-3"
                           style={{ color: "var(--color-text-muted)" }}
                         >
-                          {row.avg_rating != null
-                            ? `★ ${row.avg_rating.toFixed(1)} (${
-                                row.rating_count
-                              })`
-                            : "—"}
-                        </td>
-                        <td
-                          className="px-4 py-3"
-                          style={{ color: "var(--color-text-muted)" }}
-                        >
                           {row.session_count}
                         </td>
                       </tr>
                     ))}
                 </tbody>
               </table>
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* ── My Drills ── */}
-      {tab === "drills" && (
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2
-              className="text-2xl tracking-wide"
-              style={{
-                fontFamily: '"Bebas Neue", cursive',
-                color: "var(--color-text)",
-              }}
-            >
-              My Drills
-            </h2>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => navigate("/drills/new")}
-            >
-              <PlusCircle className="w-4 h-4" />
-              New Drill
-            </Button>
-          </div>
-
-          {/* Filters */}
-          <div
-            className="mb-6 p-4 rounded-xl border"
-            style={{
-              backgroundColor: "var(--color-surface)",
-              borderColor: "var(--color-border)",
-            }}
-          >
-            <DrillFilters
-              filters={drillFilters}
-              onFiltersChange={setDrillFilters}
-            />
-          </div>
-
-          {drillsLoading ? (
-            <div className="space-y-3">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="h-20 rounded-xl animate-pulse"
-                  style={{ backgroundColor: "var(--color-surface)" }}
-                />
-              ))}
-            </div>
-          ) : drills.length === 0 ? (
-            <div
-              className="text-center py-14 rounded-xl border"
-              style={{
-                borderColor: "var(--color-border)",
-                backgroundColor: "var(--color-surface)",
-              }}
-            >
-              <div className="text-4xl mb-3">📋</div>
-              <p
-                className="text-lg font-medium mb-2"
-                style={{ color: "var(--color-text)" }}
-              >
-                No drills yet
-              </p>
-              <p className="mb-6" style={{ color: "var(--color-text-muted)" }}>
-                Create your first drill to get started
-              </p>
-              <Button variant="primary" onClick={() => navigate("/drills/new")}>
-                <PlusCircle className="w-4 h-4" />
-                Create Drill
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {drills.map((drill) => {
-                const focusLabel =
-                  FOCUS_AREAS.find((f) => f.value === drill.focus_area)
-                    ?.label ?? drill.focus_area;
-                return (
-                  <Card key={drill.id} hoverable className="cursor-pointer">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <div
-                        className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center"
-                        style={{
-                          backgroundColor: drill.is_public
-                            ? "#cc141422"
-                            : "#88888822",
-                        }}
-                        title={drill.is_public ? "Public" : "Draft"}
-                      >
-                        {drill.is_public ? (
-                          <Eye
-                            className="w-4 h-4"
-                            style={{ color: "var(--color-accent)" }}
-                          />
-                        ) : (
-                          <EyeOff
-                            className="w-4 h-4"
-                            style={{ color: "var(--color-text-muted)" }}
-                          />
-                        )}
-                      </div>
-
-                      <div
-                        className="flex-1 min-w-0"
-                        onClick={() => navigate(`/drills/${drill.id}`)}
-                      >
-                        <div className="flex flex-wrap items-center gap-2 mb-1">
-                          <span
-                            className="font-semibold truncate"
-                            style={{ color: "var(--color-text)" }}
-                          >
-                            {drill.title}
-                          </span>
-                          {!drill.is_public && (
-                            <span
-                              className="text-xs px-1.5 py-0.5 rounded font-mono"
-                              style={{
-                                backgroundColor: "#88888822",
-                                color: "var(--color-text-muted)",
-                              }}
-                            >
-                              draft
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {drill.focus_area && (
-                            <Badge variant="focus">{focusLabel}</Badge>
-                          )}
-                          {drill.skill_level && (
-                            <Badge variant="skill">{drill.skill_level}</Badge>
-                          )}
-                          {drill.age_range && (
-                            <Badge variant="age">{drill.age_range}</Badge>
-                          )}
-                          {drill.duration_minutes && (
-                            <span
-                              className="text-xs"
-                              style={{ color: "var(--color-text-muted)" }}
-                            >
-                              {drill.duration_minutes} min
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/drills/${drill.id}/edit`);
-                          }}
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          loading={deleteDrill.isPending}
-                          onClick={(e) => handleDeleteDrill(e, drill.id)}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
-                );
-              })}
             </div>
           )}
         </section>

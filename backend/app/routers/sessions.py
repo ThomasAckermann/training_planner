@@ -67,6 +67,7 @@ async def _session_to_out(db: AsyncSession, session: Session) -> SessionOut:
                 order_index=ds.order_index,
                 duration_override=ds.duration_override,
                 coach_notes=ds.coach_notes,
+                phase_label=ds.phase_label,
                 id=drill.id,
                 title=drill.title,
                 description=drill.description,
@@ -575,6 +576,68 @@ async def remove_drill_from_session(
         db.add(remaining_ds)
 
     await db.flush()
+    return await _session_to_out(db, session)
+
+
+@router.post("/{session_id}/modules/{module_id}", response_model=SessionOut)
+@limiter.limit("20/minute")
+async def expand_module_into_session(
+    request: Request,
+    session_id: str,
+    module_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> SessionOut:
+    # Verify session ownership
+    session_result = await db.execute(select(Session).where(Session.id == session_id))
+    session = session_result.scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    # Fetch module
+    from app.models.module import TrainingModule, ModuleDrill
+
+    module_result = await db.execute(
+        select(TrainingModule).where(TrainingModule.id == module_id)
+    )
+    module = module_result.scalar_one_or_none()
+    if not module:
+        raise HTTPException(status_code=404, detail="Module not found")
+    if not module.is_public and module.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to use this module")
+
+    # Find next order_index
+    order_result = await db.execute(
+        select(func.max(DrillSession.order_index)).where(
+            DrillSession.session_id == session_id
+        )
+    )
+    max_order = order_result.scalar_one() or -1
+
+    # Load module drills
+    module_drills_result = await db.execute(
+        select(ModuleDrill)
+        .where(ModuleDrill.module_id == module_id)
+        .order_by(ModuleDrill.order_index)
+    )
+    module_drills = module_drills_result.scalars().all()
+
+    # Create DrillSession entries
+    for i, md in enumerate(module_drills):
+        ds = DrillSession(
+            session_id=session_id,
+            drill_id=md.drill_id,
+            order_index=max_order + 1 + i,
+            duration_override=md.duration_override,
+            coach_notes=md.coach_notes,
+            phase_label=module.phase_type.value,
+        )
+        db.add(ds)
+
+    await db.flush()
+    await db.refresh(session)
     return await _session_to_out(db, session)
 
 
