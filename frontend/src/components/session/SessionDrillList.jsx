@@ -221,6 +221,13 @@ function SortableDrillRow({ drill, sessionId, isOwner, index }) {
   );
 }
 
+const PHASE_DISPLAY = {
+  WARMUP: "Warm-up",
+  MAIN: "Main Part",
+  GAME: "Game",
+  COOLDOWN: "Cool-down",
+};
+
 export default function SessionDrillList({
   drills = [],
   sessionId,
@@ -270,108 +277,138 @@ export default function SessionDrillList({
   }
 
   if (!isOwner) {
+    let lastPhaseLabel = null;
     return (
       <div>
-        {drills.map((drill, index) => (
-          <div
-            key={drill.drill_session_id}
-            className="p-4 rounded-xl border mb-2"
-            style={{
-              backgroundColor: "var(--color-surface)",
-              borderColor: "var(--color-border)",
-            }}
-          >
-            <div className="flex items-start gap-3">
+        {drills.map((drill, index) => {
+          const showHeader =
+            drill.phase_label && drill.phase_label !== lastPhaseLabel;
+          if (drill.phase_label) lastPhaseLabel = drill.phase_label;
+          const phaseDisplay =
+            PHASE_DISPLAY[drill.phase_label] ?? drill.phase_label;
+          return (
+            <div key={drill.drill_session_id}>
+              {showHeader && (
+                <div className="flex items-center gap-3 my-3">
+                  <div
+                    className="h-px flex-1"
+                    style={{ backgroundColor: "var(--color-border)" }}
+                  />
+                  <span
+                    className="text-xs font-mono font-bold uppercase tracking-widest px-2"
+                    style={{ color: "var(--color-text-muted)" }}
+                  >
+                    {phaseDisplay}
+                  </span>
+                  <div
+                    className="h-px flex-1"
+                    style={{ backgroundColor: "var(--color-border)" }}
+                  />
+                </div>
+              )}
               <div
-                className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono font-bold mt-0.5"
+                className="p-4 rounded-xl border mb-2"
                 style={{
-                  backgroundColor: "var(--color-surface-2)",
-                  color: "var(--color-text-muted)",
+                  backgroundColor: "var(--color-surface)",
+                  borderColor: "var(--color-border)",
                 }}
               >
-                {index + 1}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                  <button
-                    className="font-semibold text-sm text-left hover:underline"
-                    style={{ color: "var(--color-text)" }}
-                    onClick={() => navigate(`/drills/${drill.id}`)}
-                  >
-                    {drill.title}
-                  </button>
-                  {drill.focus_area && (
-                    <Badge variant="focus">
-                      {FOCUS_AREAS.find((f) => f.value === drill.focus_area)
-                        ?.label ?? drill.focus_area}
-                    </Badge>
-                  )}
-                  {drill.skill_level && (
-                    <Badge variant="skill">{drill.skill_level}</Badge>
-                  )}
-                  {drill.age_range && (
-                    <Badge variant="age">{drill.age_range}</Badge>
-                  )}
-                </div>
-                <div
-                  className="text-xs mb-2"
-                  style={{ color: "var(--color-text-muted)" }}
-                >
-                  {(drill.duration_override ?? drill.duration_minutes) != null
-                    ? `${drill.duration_override ?? drill.duration_minutes} min`
-                    : "— min"}
-                  {drill.num_players_min != null && (
-                    <span className="ml-3">
-                      {drill.num_players_min}
-                      {drill.num_players_max &&
-                      drill.num_players_max !== drill.num_players_min
-                        ? `–${drill.num_players_max}`
-                        : ""}{" "}
-                      players
-                    </span>
-                  )}
-                </div>
-                {drill.drawing_thumb_url && (
+                <div className="flex items-start gap-3">
                   <div
-                    className="mb-2 rounded overflow-hidden"
+                    className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono font-bold mt-0.5"
                     style={{
-                      border: "1px solid var(--color-border)",
-                      maxWidth: 320,
-                    }}
-                  >
-                    <img
-                      src={drill.drawing_thumb_url}
-                      alt="Tactical diagram"
-                      className="w-full block"
-                    />
-                  </div>
-                )}
-                {drill.description && (
-                  <p
-                    className="text-xs leading-relaxed mb-2"
-                    style={{
+                      backgroundColor: "var(--color-surface-2)",
                       color: "var(--color-text-muted)",
-                      fontFamily: '"Lora", serif',
                     }}
                   >
-                    {drill.description}
-                  </p>
-                )}
-                {drill.coach_notes && (
-                  <p
-                    className="text-xs italic pl-3"
-                    style={{
-                      color: "var(--color-accent)",
-                      borderLeft: "2px solid var(--color-accent)",
-                    }}
-                  >
-                    {drill.coach_notes}
-                  </p>
-                )}
+                    {index + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                      <button
+                        className="font-semibold text-sm text-left hover:underline"
+                        style={{ color: "var(--color-text)" }}
+                        onClick={() => navigate(`/drills/${drill.id}`)}
+                      >
+                        {drill.title}
+                      </button>
+                      {drill.focus_area && (
+                        <Badge variant="focus">
+                          {FOCUS_AREAS.find((f) => f.value === drill.focus_area)
+                            ?.label ?? drill.focus_area}
+                        </Badge>
+                      )}
+                      {drill.skill_level && (
+                        <Badge variant="skill">{drill.skill_level}</Badge>
+                      )}
+                      {drill.age_range && (
+                        <Badge variant="age">{drill.age_range}</Badge>
+                      )}
+                    </div>
+                    <div
+                      className="text-xs mb-2"
+                      style={{ color: "var(--color-text-muted)" }}
+                    >
+                      {(drill.duration_override ?? drill.duration_minutes) !=
+                      null
+                        ? `${
+                            drill.duration_override ?? drill.duration_minutes
+                          } min`
+                        : "— min"}
+                      {drill.num_players_min != null && (
+                        <span className="ml-3">
+                          {drill.num_players_min}
+                          {drill.num_players_max &&
+                          drill.num_players_max !== drill.num_players_min
+                            ? `–${drill.num_players_max}`
+                            : ""}{" "}
+                          players
+                        </span>
+                      )}
+                    </div>
+                    {drill.drawing_thumb_url && (
+                      <div
+                        className="mb-2 rounded overflow-hidden"
+                        style={{
+                          border: "1px solid var(--color-border)",
+                          maxWidth: 320,
+                        }}
+                      >
+                        <img
+                          src={drill.drawing_thumb_url}
+                          alt="Tactical diagram"
+                          className="w-full block"
+                        />
+                      </div>
+                    )}
+                    {drill.description && (
+                      <p
+                        className="text-xs leading-relaxed mb-2"
+                        style={{
+                          color: "var(--color-text-muted)",
+                          fontFamily: '"Lora", serif',
+                        }}
+                      >
+                        {drill.description}
+                      </p>
+                    )}
+                    {drill.coach_notes && (
+                      <p
+                        className="text-xs italic pl-3"
+                        style={{
+                          color: "var(--color-accent)",
+                          borderLeft: "2px solid var(--color-accent)",
+                        }}
+                      >
+                        {drill.coach_notes}
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     );
   }

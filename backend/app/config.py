@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 7
     environment: str = "development"  # "development" | "production" | "test"
 
+    google_client_id: Optional[str] = None
+    google_client_secret: Optional[str] = None
+
     # Storage — set STORAGE_BACKEND=s3 in production and provide credentials.
     # For AWS S3: set AWS_* vars, leave AWS_ENDPOINT_URL unset.
     # For Railway / other S3-compatible providers: also set AWS_ENDPOINT_URL.

@@ -1,6 +1,9 @@
+from authlib.integrations.starlette_client import OAuth
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.requests import Request as StarletteRequest
+from starlette.responses import RedirectResponse
 
 from app.config import settings
 from app.database import get_db
@@ -166,3 +169,71 @@ async def update_me(
     await db.flush()
     await db.refresh(current_user)
     return UserOut.model_validate(current_user)
+
+
+oauth = OAuth()
+oauth.register(
+    name="google",
+    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+    client_kwargs={"scope": "openid email profile"},
+)
+
+
+@router.get("/google")
+async def google_login(request: StarletteRequest):
+    if not settings.google_client_id:
+        raise HTTPException(status_code=501, detail="Google OAuth is not configured")
+    redirect_uri = str(request.url_for("google_callback"))
+    client = oauth.create_client("google")
+    client.client_id = settings.google_client_id
+    client.client_secret = settings.google_client_secret
+    return await client.authorize_redirect(request, redirect_uri)
+
+
+@router.get("/google/callback", name="google_callback")
+async def google_callback(
+    request: StarletteRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    if not settings.google_client_id:
+        raise HTTPException(status_code=501, detail="Google OAuth is not configured")
+    client = oauth.create_client("google")
+    client.client_id = settings.google_client_id
+    client.client_secret = settings.google_client_secret
+    token = await client.authorize_access_token(request)
+    user_info = token.get("userinfo")
+    if not user_info:
+        raise HTTPException(
+            status_code=400, detail="Failed to fetch user info from Google"
+        )
+
+    google_id = user_info["sub"]
+    email = user_info.get("email", "")
+    name = user_info.get("name", email.split("@")[0])
+
+    # Try to find existing user by google_id, then by email
+    result = await db.execute(select(User).where(User.google_id == google_id))
+    user = result.scalar_one_or_none()
+
+    if not user:
+        result = await db.execute(select(User).where(User.email == email))
+        user = result.scalar_one_or_none()
+        if user:
+            # Link Google to existing account
+            user.google_id = google_id
+        else:
+            # Create new user
+            user = User(
+                email=email,
+                password_hash=None,
+                name=name,
+                google_id=google_id,
+            )
+            db.add(user)
+
+    await db.flush()
+    await db.refresh(user)
+
+    response = RedirectResponse(url=settings.frontend_url or "/")
+    _set_auth_cookies(response, str(user.id))
+    return response

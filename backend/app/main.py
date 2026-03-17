@@ -6,11 +6,13 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import settings
 from app.limiter import limiter
 from app.routers import auth, drills, sessions, users
 from app.routers import comments, feed
+from app.routers.modules import router as modules_router
 
 app = FastAPI(
     title="Volley Coach Planner API",
@@ -26,6 +28,9 @@ app = FastAPI(
 # Rate limiter state
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Session middleware (required for OAuth state)
+app.add_middleware(SessionMiddleware, secret_key=settings.jwt_secret)
 
 # CORS middleware
 app.add_middleware(
@@ -56,6 +61,7 @@ app.include_router(sessions.router)
 app.include_router(users.router)
 app.include_router(comments.router)
 app.include_router(feed.router)
+app.include_router(modules_router)
 
 
 @app.on_event("startup")

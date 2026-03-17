@@ -64,6 +64,7 @@ export default function DrawingToolbar({
     >
       <button
         title="Undo (Ctrl+Z)"
+        aria-label="Undo"
         style={{ ...btnBase, ...(past.length === 0 ? btnDisabled : {}) }}
         disabled={past.length === 0}
         onClick={undo}
@@ -74,6 +75,7 @@ export default function DrawingToolbar({
 
       <button
         title="Redo (Ctrl+Y)"
+        aria-label="Redo"
         style={{ ...btnBase, ...(future.length === 0 ? btnDisabled : {}) }}
         disabled={future.length === 0}
         onClick={redo}
@@ -93,6 +95,7 @@ export default function DrawingToolbar({
 
       <button
         title="Delete selected (Del)"
+        aria-label="Delete selected"
         style={{
           ...btnBase,
           ...(!selectedId ? btnDisabled : {}),
@@ -110,6 +113,7 @@ export default function DrawingToolbar({
 
       <button
         title="Save drawing"
+        aria-label={isSaving ? "Saving drawing" : saveLabel || "Save Drawing"}
         style={{
           ...btnBase,
           backgroundColor: "var(--color-accent)",

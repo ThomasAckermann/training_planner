@@ -2,7 +2,6 @@ import { useNavigate } from "react-router-dom";
 import { Clock, Users } from "lucide-react";
 import Card from "../ui/Card.jsx";
 import Badge from "../ui/Badge.jsx";
-import StarRating from "./StarRating.jsx";
 import { FOCUS_AREAS } from "../../lib/constants.js";
 
 export default function DrillCard({ drill }) {
@@ -30,6 +29,9 @@ export default function DrillCard({ drill }) {
             src={drill.drawing_thumb_url}
             alt={`${drill.title} diagram`}
             className="w-full h-full object-cover"
+            onError={(e) => {
+              e.currentTarget.parentElement.style.display = "none";
+            }}
           />
         </div>
       )}
@@ -87,15 +89,6 @@ export default function DrillCard({ drill }) {
           </span>
         )}
       </div>
-      {drill.avg_rating != null && (
-        <div className="mt-2">
-          <StarRating
-            avgRating={drill.avg_rating}
-            ratingCount={drill.rating_count}
-            size="sm"
-          />
-        </div>
-      )}
     </Card>
   );
 }

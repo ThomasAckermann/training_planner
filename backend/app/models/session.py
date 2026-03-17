@@ -61,6 +61,7 @@ class DrillSession(Base):
     order_index: Mapped[int] = mapped_column(Integer, nullable=False)
     duration_override: Mapped[int | None] = mapped_column(Integer, nullable=True)
     coach_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    phase_label: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     drill: Mapped["Drill"] = relationship("Drill")  # noqa: F821
     session: Mapped["Session"] = relationship(

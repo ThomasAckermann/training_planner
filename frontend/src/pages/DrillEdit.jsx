@@ -444,7 +444,8 @@ export default function DrillEdit() {
               className="text-xs mt-1"
               style={{ color: "var(--color-text-muted)" }}
             >
-              Press Enter or comma to add a tag
+              Press Enter or comma to add a tag · spaces become hyphens (e.g.
+              &ldquo;back row&rdquo; → &ldquo;back-row&rdquo;)
             </p>
           </Card>
 

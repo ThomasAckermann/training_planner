@@ -12,6 +12,7 @@ class DrillInSession(BaseModel):
     order_index: int
     duration_override: int | None = None
     coach_notes: str | None = None
+    phase_label: str | None = None
 
     # Drill fields (from DrillOut)
     id: str

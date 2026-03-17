@@ -81,9 +81,6 @@ class Drill(Base):
     favourites: Mapped[list["Favourite"]] = relationship(
         "Favourite", back_populates="drill", lazy="select"
     )  # noqa: F821
-    ratings: Mapped[list["Rating"]] = relationship(  # noqa: F821
-        "Rating", back_populates="drill", lazy="select"
-    )
 
 
 class Like(Base):
@@ -100,6 +97,10 @@ class Like(Base):
         String, ForeignKey("sessions.id"), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    module_id: Mapped[str | None] = mapped_column(
+        ForeignKey("training_modules.id", ondelete="CASCADE"), nullable=True
+    )
 
     user: Mapped["User"] = relationship("User", back_populates="likes")  # noqa: F821
     drill: Mapped["Drill | None"] = relationship("Drill", back_populates="likes")  # noqa: F821
@@ -120,6 +121,10 @@ class Favourite(Base):
         String, ForeignKey("sessions.id"), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    module_id: Mapped[str | None] = mapped_column(
+        ForeignKey("training_modules.id", ondelete="CASCADE"), nullable=True
+    )
 
     user: Mapped["User"] = relationship("User", back_populates="favourites")  # noqa: F821
     drill: Mapped["Drill | None"] = relationship("Drill", back_populates="favourites")  # noqa: F821
