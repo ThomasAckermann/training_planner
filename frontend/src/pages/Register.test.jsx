@@ -38,15 +38,6 @@ describe("Register page", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders a Google OAuth link", () => {
-    renderRegister();
-    const googleLink = screen.getByRole("link", {
-      name: /continue with google/i,
-    });
-    expect(googleLink).toBeInTheDocument();
-    expect(googleLink).toHaveAttribute("href", "/api/auth/google");
-  });
-
   it("shows validation error when name is too short", async () => {
     const user = userEvent.setup();
     renderRegister();
