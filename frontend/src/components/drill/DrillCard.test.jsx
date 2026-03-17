@@ -68,7 +68,7 @@ describe("DrillCard", () => {
 
   it("renders the likes count", () => {
     renderCard();
-    expect(screen.getByText("5")).toBeInTheDocument();
+    expect(screen.getByText(/♥\s*5/)).toBeInTheDocument();
   });
 
   it("does not render likes when count is 0", () => {

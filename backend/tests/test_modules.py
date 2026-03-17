@@ -24,9 +24,9 @@ async def _register_and_create_drill(client, user=USER1) -> str:
 # ---------------------------------------------------------------------------
 
 
-async def test_list_modules_requires_auth(client):
+async def test_list_modules_accessible_without_auth(client):
     r = await client.get("/api/modules")
-    assert r.status_code == 401
+    assert r.status_code == 200
 
 
 async def test_create_module_requires_auth(client):
@@ -96,7 +96,7 @@ async def test_list_modules_includes_own_and_public(client):
 
     r = await client.get("/api/modules")
     assert r.status_code == 200
-    titles = [m["title"] for m in r.json()]
+    titles = [m["title"] for m in r.json()["items"]]
     # User2 sees: User1 public, User2 private (own), User2 public
     assert MODULE_PAYLOAD["title"] in titles
     assert "User2 Private" in titles
@@ -114,7 +114,7 @@ async def test_list_modules_excludes_other_private(client):
     await client.post("/api/auth/register", json=USER2)
     r = await client.get("/api/modules")
     assert r.status_code == 200
-    titles = [m["title"] for m in r.json()]
+    titles = [m["title"] for m in r.json()["items"]]
     assert "Hidden" not in titles
 
 
@@ -128,7 +128,7 @@ async def test_list_modules_filter_by_phase_type(client):
 
     r = await client.get("/api/modules?phase_type=WARMUP")
     assert r.status_code == 200
-    for m in r.json():
+    for m in r.json()["items"]:
         assert m["phase_type"] == "WARMUP"
 
 

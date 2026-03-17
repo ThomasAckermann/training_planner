@@ -119,7 +119,11 @@ export default function Register() {
             </div>
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="space-y-5"
+            noValidate
+          >
             <Input
               label="Full Name"
               type="text"
