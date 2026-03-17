@@ -239,13 +239,13 @@ export default function DrillPickerPanel({
                   loading={isAdding}
                   onClick={() => handleAdd(drill)}
                   aria-label={
-                    alreadyAdded ? "Already added" : `Add ${drill.title}`
+                    alreadyAdded ? "Already in session" : `Add ${drill.title}`
                   }
                 >
                   {alreadyAdded ? (
                     <>
                       <Check className="w-3.5 h-3.5" />
-                      Added
+                      In Session
                     </>
                   ) : (
                     <>

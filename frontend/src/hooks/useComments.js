@@ -34,7 +34,10 @@ export function useCreateDrillComment(drillId) {
         queryKey: ["comments", "drill", drillId],
       });
     },
-    onError: () => toast.error("Failed to post comment"),
+    onError: (error) => {
+      const message = error.response?.data?.detail || "Failed to post comment";
+      toast.error(message);
+    },
   });
 }
 
@@ -48,7 +51,10 @@ export function useCreateSessionComment(sessionId) {
         queryKey: ["comments", "session", sessionId],
       });
     },
-    onError: () => toast.error("Failed to post comment"),
+    onError: (error) => {
+      const message = error.response?.data?.detail || "Failed to post comment";
+      toast.error(message);
+    },
   });
 }
 
@@ -60,6 +66,10 @@ export function useDeleteComment(queryKey) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
     },
-    onError: () => toast.error("Failed to delete comment"),
+    onError: (error) => {
+      const message =
+        error.response?.data?.detail || "Failed to delete comment";
+      toast.error(message);
+    },
   });
 }

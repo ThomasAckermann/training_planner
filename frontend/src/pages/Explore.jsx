@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useDrills } from "../hooks/useDrills.js";
 import { useSessions } from "../hooks/useSessions.js";
@@ -530,7 +531,12 @@ function ModulesTab() {
 }
 
 export default function Explore() {
-  const [activeTab, setActiveTab] = useState("drills");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") ?? "drills";
+
+  function setActiveTab(tab) {
+    setSearchParams({ tab }, { replace: true });
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">

@@ -57,7 +57,7 @@ export function useAuth() {
       // Ignore logout errors
     } finally {
       clearUser();
-      navigate("/");
+      navigate("/login");
       toast.success("Logged out successfully");
     }
   }

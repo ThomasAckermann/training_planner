@@ -288,7 +288,8 @@ export default function SessionNew() {
             className="text-xs mt-1"
             style={{ color: "var(--color-text-muted)" }}
           >
-            Press Enter or comma to add a tag
+            Press Enter or comma to add a tag · spaces become hyphens (e.g.
+            &ldquo;back row&rdquo; → &ldquo;back-row&rdquo;)
           </p>
         </Card>
 
@@ -313,7 +314,11 @@ export default function SessionNew() {
           </label>
 
           <div className="flex gap-3">
-            <Button type="button" variant="ghost" onClick={() => navigate(-1)}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => navigate("/me")}
+            >
               Cancel
             </Button>
             <Button

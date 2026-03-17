@@ -82,7 +82,11 @@ export default function Dashboard() {
   async function handleDeleteModule(e, id) {
     e.stopPropagation();
     if (!confirm("Delete this module? This action cannot be undone.")) return;
-    await deleteModule.mutateAsync(id);
+    try {
+      await deleteModule.mutateAsync(id);
+    } catch {
+      // error toast handled in hook
+    }
   }
 
   const grouped = {};

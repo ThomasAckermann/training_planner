@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Link, Navigate, Route, Routes } from "react-router-dom";
 import Navbar from "./components/layout/Navbar.jsx";
 import { useAuth } from "./hooks/useAuth.js";
 import Home from "./pages/Home.jsx";
@@ -16,6 +16,51 @@ import SessionCoach from "./pages/SessionCoach.jsx";
 import Profile from "./pages/Profile.jsx";
 import ModuleNew from "./pages/ModuleNew.jsx";
 import ModuleEdit from "./pages/ModuleEdit.jsx";
+
+function NotFound() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+      <p
+        className="text-8xl font-bold mb-4"
+        style={{
+          fontFamily: '"Bebas Neue", cursive',
+          color: "var(--color-accent)",
+        }}
+      >
+        404
+      </p>
+      <h1
+        className="text-2xl font-semibold mb-2"
+        style={{ color: "var(--color-text)" }}
+      >
+        Page not found
+      </h1>
+      <p className="mb-6" style={{ color: "var(--color-text-muted)" }}>
+        The page you&apos;re looking for doesn&apos;t exist.
+      </p>
+      <div className="flex gap-3">
+        <Link
+          to="/"
+          className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+          style={{ backgroundColor: "var(--color-accent)", color: "#000" }}
+        >
+          Go Home
+        </Link>
+        <Link
+          to="/explore"
+          className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+          style={{
+            backgroundColor: "var(--color-surface-2)",
+            color: "var(--color-text)",
+            border: "1px solid var(--color-border)",
+          }}
+        >
+          Explore
+        </Link>
+      </div>
+    </div>
+  );
+}
 
 function ProtectedRoute({ children }) {
   const { user, isLoading } = useAuth();
@@ -93,7 +138,14 @@ export default function App() {
             }
           />
           <Route path="/sessions/:id" element={<SessionDetail />} />
-          <Route path="/sessions/:id/coach" element={<SessionCoach />} />
+          <Route
+            path="/sessions/:id/coach"
+            element={
+              <ProtectedRoute>
+                <SessionCoach />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/sessions/:id/edit"
             element={
@@ -125,7 +177,7 @@ export default function App() {
           />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
     </div>

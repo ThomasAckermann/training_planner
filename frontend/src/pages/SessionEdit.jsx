@@ -394,6 +394,13 @@ export default function SessionEdit() {
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyDown={addTag}
               />
+              <p
+                className="text-xs mt-1"
+                style={{ color: "var(--color-text-muted)" }}
+              >
+                Press Enter or comma to add a tag · spaces become hyphens (e.g.
+                &ldquo;back row&rdquo; → &ldquo;back-row&rdquo;)
+              </p>
             </Card>
 
             <div className="flex items-center justify-between">
@@ -420,8 +427,9 @@ export default function SessionEdit() {
                 loading={isSubmitting || updateSession.isPending}
                 disabled={
                   !isDirty &&
-                  selectedFocusAreas === session.focus_areas &&
-                  tags === session.tags
+                  JSON.stringify(selectedFocusAreas) ===
+                    JSON.stringify(session.focus_areas ?? []) &&
+                  JSON.stringify(tags) === JSON.stringify(session.tags ?? [])
                 }
               >
                 Save Changes

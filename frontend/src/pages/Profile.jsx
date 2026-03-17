@@ -107,13 +107,21 @@ export default function Profile() {
   async function handleDeleteDrill(e, id) {
     e.stopPropagation();
     if (!confirm("Delete this drill? This action cannot be undone.")) return;
-    await deleteDrill.mutateAsync(id);
+    try {
+      await deleteDrill.mutateAsync(id);
+    } catch {
+      // error toast handled in hook
+    }
   }
 
   async function handleDeleteSession(e, id) {
     e.stopPropagation();
     if (!confirm("Delete this session? This action cannot be undone.")) return;
-    await deleteSession.mutateAsync(id);
+    try {
+      await deleteSession.mutateAsync(id);
+    } catch {
+      // error toast handled in hook
+    }
   }
 
   if (profileLoading) {

@@ -57,6 +57,7 @@ export default function DrillFilters({ filters, onFiltersChange }) {
 
       {/* Age Range */}
       <select
+        aria-label="Filter by age range"
         className={selectClasses}
         value={filters.age_range || ""}
         onChange={(e) => handleSelectChange("age_range", e.target.value)}
@@ -71,6 +72,7 @@ export default function DrillFilters({ filters, onFiltersChange }) {
 
       {/* Skill Level */}
       <select
+        aria-label="Filter by skill level"
         className={selectClasses}
         value={filters.skill_level || ""}
         onChange={(e) => handleSelectChange("skill_level", e.target.value)}
@@ -85,6 +87,7 @@ export default function DrillFilters({ filters, onFiltersChange }) {
 
       {/* Focus Area */}
       <select
+        aria-label="Filter by focus area"
         className={selectClasses}
         value={filters.focus_area || ""}
         onChange={(e) => handleSelectChange("focus_area", e.target.value)}
@@ -99,6 +102,7 @@ export default function DrillFilters({ filters, onFiltersChange }) {
 
       {/* Sort */}
       <select
+        aria-label="Sort drills"
         className={selectClasses}
         value={filters.sort_by || "newest"}
         onChange={(e) =>

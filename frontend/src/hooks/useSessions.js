@@ -199,6 +199,7 @@ export function useDuplicateSession() {
       api.post(`/api/sessions/${sessionId}/duplicate`).then((r) => r.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sessions", "mine"] });
+      queryClient.invalidateQueries({ queryKey: ["sessions"] });
     },
     onError: (error) => {
       const message = error.response?.data?.detail || "Failed to fork session";

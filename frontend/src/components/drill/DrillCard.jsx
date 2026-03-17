@@ -29,6 +29,9 @@ export default function DrillCard({ drill }) {
             src={drill.drawing_thumb_url}
             alt={`${drill.title} diagram`}
             className="w-full h-full object-cover"
+            onError={(e) => {
+              e.currentTarget.parentElement.style.display = "none";
+            }}
           />
         </div>
       )}
