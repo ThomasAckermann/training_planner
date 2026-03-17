@@ -261,7 +261,7 @@ export default function Dashboard() {
                 />
               ))}
             </div>
-          ) : (myDrills ?? []).length === 0 ? (
+          ) : (myDrills?.items ?? []).length === 0 ? (
             <div
               className="text-center py-20 rounded-2xl border"
               style={{
@@ -286,7 +286,7 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="space-y-3">
-              {(myDrills ?? []).map((drill) => {
+              {(myDrills?.items ?? []).map((drill) => {
                 const focusLabel =
                   FOCUS_AREAS.find((f) => f.value === drill.focus_area)
                     ?.label ?? drill.focus_area;
@@ -387,7 +387,7 @@ export default function Dashboard() {
                 />
               ))}
             </div>
-          ) : (mySessions ?? []).length === 0 ? (
+          ) : (mySessions?.items ?? []).length === 0 ? (
             <div
               className="text-center py-20 rounded-2xl border"
               style={{
@@ -415,7 +415,7 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="space-y-3">
-              {(mySessions ?? []).map((session) => (
+              {(mySessions?.items ?? []).map((session) => (
                 <Card key={session.id} hoverable>
                   <div className="flex flex-wrap items-center gap-3">
                     <div
